@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,6 +77,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.Flow
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogDao
@@ -221,6 +223,10 @@ private val COVER_COLORS = listOf(
     Color(0xFF4F86C6) to Color(0xFF8FB4E0),
 )
 private val PAPER = Color(0xFFEBE6DC)
+
+// 一覧の小さな表紙（幅 64dp）の文字。元アプリの一覧と並べて大きさを合わせた
+private val SMALL_COVER_TITLE = TextStyle(fontSize = 9.5.sp, lineHeight = 13.sp)
+private val SMALL_COVER_AUTHOR = TextStyle(fontSize = 8.5.sp, lineHeight = 11.sp)
 private val PAPER_FLECK = Color(0x40A08C70)
 
 /** 和紙風の表紙。上に作品名、下の帯に著者名を置き、細い線を 2 本ずつ添える。 */
@@ -245,7 +251,7 @@ fun BookCover(work: WorkItem, modifier: Modifier = Modifier, small: Boolean = fa
         },
     ) {
         Box(Modifier.weight(0.68f).fillMaxWidth().padding(horizontal = if (small) 4.dp else 8.dp).padding(top = if (small) 14.dp else 24.dp), contentAlignment = Alignment.TopCenter) {
-            Text(work.title, color = ink, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, style = if (small) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleSmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text(work.title, color = ink, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, style = if (small) SMALL_COVER_TITLE else MaterialTheme.typography.titleSmall, maxLines = if (small) 2 else 3, overflow = TextOverflow.Ellipsis)
         }
         Box(
             Modifier.weight(0.32f).fillMaxWidth().background(band).drawBehind {
@@ -256,7 +262,7 @@ fun BookCover(work: WorkItem, modifier: Modifier = Modifier, small: Boolean = fa
             },
             contentAlignment = Alignment.Center,
         ) {
-            Text(work.authors.orEmpty(), color = Color.White.copy(alpha = 0.9f), style = if (small) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 6.dp))
+            Text(work.authors.orEmpty(), color = Color.White.copy(alpha = 0.9f), style = if (small) SMALL_COVER_AUTHOR else MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 6.dp))
         }
     }
 }
