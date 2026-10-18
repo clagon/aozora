@@ -53,7 +53,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
@@ -129,7 +128,7 @@ fun StackedScreen(screen: Screen, dao: CatalogDao, push: (Screen) -> Unit, back:
                 }
             }
             is Screen.NdcWorks -> WorkList(remember(screen) { dao.worksByNdc(screen.code, screen.kidsOnly) })
-            is Screen.KanaWorks -> WorkList(remember(screen) { kanaRange(screen.kana).let { dao.worksByYomi(it.from, it.to) } }, numbered = true)
+            is Screen.KanaWorks -> WorkList(remember(screen) { kanaRange(screen.kana).let { dao.worksByYomi(it.from, it.to) } })
             is Screen.PersonWorks -> WorkList(remember(screen) { dao.worksByPerson(screen.personId) })
         }
     }
@@ -428,20 +427,17 @@ fun CatalogStatus(catalog: Catalog) {
     }
 }
 
-/** 作品の一覧。各行は小さな表紙・作品名・文字遣い種別・著者。numbered なら左に通し番号を付ける。 */
+/** 作品の一覧。各行は小さな表紙・作品名・文字遣い種別・著者。 */
 @Composable
-private fun WorkList(works: Flow<List<WorkItem>>, numbered: Boolean = false) {
+private fun WorkList(works: Flow<List<WorkItem>>) {
     val items by works.collectAsState(null)
     when {
         items == null -> {}
         items!!.isEmpty() -> Text("作品がありません", Modifier.padding(16.dp))
         else -> LazyColumn {
             // ponytail: 作品詳細ができるまでは押しても何もしない
-            itemsIndexed(items!!, key = { _, it -> it.id }) { i, work ->
-                Row(Modifier.fillMaxWidth().padding(end = 16.dp, top = 8.dp, bottom = 8.dp, start = if (numbered) 0.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (numbered) {
-                        Text("${i + 1}", color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, modifier = Modifier.width(56.dp))
-                    }
+            items(items!!, key = { it.id }) { work ->
+                Row(Modifier.fillMaxWidth().padding(end = 16.dp, top = 8.dp, bottom = 8.dp, start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     BookCover(work, Modifier.width(64.dp), small = true)
                     Column(Modifier.padding(start = 16.dp).weight(1f)) {
                         Text(work.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
