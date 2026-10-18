@@ -102,9 +102,9 @@ class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
         } catch (e: Exception) {
             return null
         }
-        // Wikipedia のロゴ画像は Html.fromHtml で置換文字になるので先に外す
-        return aboutHtml(page, label)?.replace(Regex("<img[^>]*>"), "")
-            ?.let { Html.fromHtml(it, Html.FROM_HTML_MODE_COMPACT).toString().trim() }.orEmpty()
+        return aboutHtml(page, label)?.let {
+            Html.fromHtml(it, Html.FROM_HTML_MODE_COMPACT).toString().trim()
+        }.orEmpty()
     }
 
     // ponytail: 全件をメモリに載せてから DB に入れる（作品 1.8 万件で数十 MB）。重くなったら行ごとに insert する
@@ -137,6 +137,15 @@ fun personUrl(personId: Int) = "https://www.aozora.gr.jp/index_pages/person$pers
  */
 internal fun aboutHtml(page: String, label: String): String? =
     Regex("""$label：</td><td>(.*?)</td>""", RegexOption.DOT_MATCHES_ALL).find(page)?.groupValues?.get(1)
+        ?.replace(WIKIPEDIA_LINK, "")
+        // 残った画像は Html.fromHtml で置換文字になるので外す
+        ?.replace(Regex("<img[^>]*>"), "")
+
+/**
+ * 欄の末尾や全体に置かれた Wikipedia へのリンク（ロゴ画像と「項目名」）。紹介文ではないので取り込まない。
+ * これしかない欄は空になり、画面には出さない。
+ */
+private val WIKIPEDIA_LINK = Regex("""<a href="https?://ja\.wikipedia\.org/"[^>]*>.*?</a>「<a [^>]*>.*?</a>」""")
 
 /** CSV から読み取ったカタログ全体。[CatalogDao.replaceAll] でそのまま DB に入れる。 */
 class ParsedCatalog(val works: List<Work>, val persons: List<Person>, val credits: List<Credit>)
