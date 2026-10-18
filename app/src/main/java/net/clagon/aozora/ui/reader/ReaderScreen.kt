@@ -232,12 +232,13 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
             ) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBackIos, contentDescription = "戻る", tint = Color.White)
             }
-            if (pages > 1) {
-                Column(
-                    Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .navigationBarsPadding().padding(horizontal = 24.dp, vertical = 12.dp),
-                ) {
+            Column(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .navigationBarsPadding().padding(horizontal = 24.dp, vertical = 12.dp),
+            ) {
+                // 1 ページしかない作品では動かす先がないので、スライダーだけ出さない
+                if (pages > 1) {
                     Slider(
                         value = page.toFloat(),
                         onValueChange = { jump(it.roundToInt()) },
@@ -246,10 +247,10 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
                             inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                         ),
                     )
-                    // ponytail: 目次・夜間・背景は、作るときにこの並びの左に足す
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                        BarButton(Icons.Filled.TextFields, "文字") { panelShown = true }
-                    }
+                }
+                // ponytail: 目次・夜間・背景は、作るときにこの並びの左に足す
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    BarButton(Icons.Filled.TextFields, "文字") { panelShown = true }
                 }
             }
         }
