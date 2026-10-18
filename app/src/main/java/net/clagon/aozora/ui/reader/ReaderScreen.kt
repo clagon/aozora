@@ -24,8 +24,8 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -243,7 +243,12 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
                 onClick = back,
                 modifier = Modifier.padding(12.dp).size(44.dp).clip(CircleShape).background(Color(0x99000000)),
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBackIos, contentDescription = "戻る", tint = Color.White)
+                Icon(
+                    Icons.Filled.ArrowBackIosNew,
+                    contentDescription = "戻る",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
+                )
             }
             Column(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth()
