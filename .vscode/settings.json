@@ -2,6 +2,6 @@
   // Kotlin の整形は ktlint に揃える（AGENTS.md）。拡張の整形は使わず、保存後に ktlint をかける
   "[kotlin]": { "editor.formatOnSave": false },
   "emeraldwalk.runonsave": {
-    "commands": [{ "match": "\\.kts?$", "cmd": "${workspaceFolder}/scripts/ktlint-format.sh ${file}" }]
+    "commands": [{ "match": "\\.kts?$", "cmd": "\"${workspaceFolder}/scripts/ktlint-format.sh\" \"${file}\"" }]
   }
 }
