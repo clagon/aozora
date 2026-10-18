@@ -46,9 +46,13 @@ internal fun decodeXhtml(bytes: ByteArray): String {
 
 /**
  * 本文の XHTML を、リーダーで表示する HTML にする。サイトの CSS とスクリプトは外し、
- * 縦書きと段組みの CSS（[css]）と、ページをめくるスクリプト（[script]）を差し込む。
+ * 縦書きと段組みの CSS（[css]）、文字パネルの設定の CSS の変数（[variables]）、ページをめくるスクリプト（[script]）を差し込む。
+ * 最初から設定どおりに組むので、開いた直後に組み直して見た目が変わることがない。
  */
-internal fun readerHtml(xhtml: String, css: String, script: String): String = xhtml
+internal fun readerHtml(xhtml: String, css: String, variables: String, script: String): String = xhtml
     .replace(Regex("""<link [^>]*rel="stylesheet"[^>]*>"""), "")
     .replace(Regex("""<script [^>]*src="[^"]*"[^>]*>\s*</script>"""), "")
-    .replaceFirst("</head>", "<style>$css</style><script>$script</script></head>")
+    .replaceFirst(
+        "</head>",
+        "<style>$css</style><style id=\"reader-vars\">$variables</style><script>$script</script></head>",
+    )

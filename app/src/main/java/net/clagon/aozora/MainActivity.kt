@@ -27,6 +27,10 @@ class MainActivity : ComponentActivity() {
                     background = Color.White,
                     surface = Color.White,
                     surfaceContainerHigh = Color(0xFFF0F2F4),
+                    // 下から出すパネルなどの地は白にし、選んだ項目は青の淡い色で示す（既定の紫を使わない）
+                    surfaceContainerLow = Color.White,
+                    secondaryContainer = Color(0xFFE3EDFC),
+                    onSecondaryContainer = Color(0xFF1F4E9A),
                 ),
             ) {
                 App()

@@ -2,9 +2,12 @@
  * 本文を縦書きにし、1 画面ずつの段に分ける。縦書きでは段は上から下へ並ぶので、
  * 1 段の高さを画面の高さにそろえ、縦にスクロールして 1 ページずつ見せる（reader.js）。
  * --margin-x は左右（行の並ぶ方向）、--margin-y は上下（文字の並ぶ方向）の余白。
+ * 文字サイズ・行間・余白は文字パネルの設定で、アプリが別の style（#reader-vars）で上書きする（ReaderSettings）。
  * --page-width と --page-height は画面の大きさで、reader.js が入れる（WebView の大きさが決まる前は vh が 0 になるため）。
  */
 :root {
+    --font-size: 18px;
+    --line-height: 1.8;
     --margin-x: 24px;
     --margin-y: 40px;
     --page-width: 100vw;
@@ -26,8 +29,8 @@ body {
     column-gap: calc(2 * var(--margin-y));
     column-fill: auto;
     font-family: serif;
-    font-size: 18px;
-    line-height: 1.8;
+    font-size: var(--font-size);
+    line-height: var(--line-height);
     color: #222;
     background: #fff;
     -webkit-text-size-adjust: none;

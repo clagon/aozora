@@ -8,10 +8,13 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -19,12 +22,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -48,6 +54,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -57,6 +64,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import net.clagon.aozora.AozoraApp
 import net.clagon.aozora.catalog.Catalog
+import net.clagon.aozora.reader.ReaderSettings
 import net.clagon.aozora.reader.readerHtml
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
@@ -71,10 +79,10 @@ private const val SWIPE_DP = 48
  * 本文を縦書きで 1 ページずつ読む画面。本文は WebView に段組みで描き（assets/reader）、
  * めくる操作はその上に重ねた透明な層で受ける。
  * - 左側のタップか右へのスワイプ（紙の本のようにページを右へ送る）で次のページ、右側のタップか左へのスワイプで前のページ。
- * - 中央のタップで、戻るボタンとページのスライダーを出し入れする。
+ * - 中央のタップで、戻るボタンとページのスライダー、文字パネルを開くボタンを出し入れする。
  * 読んだ位置は読了率（0〜1）で作品ごとに残し、次に開いたときにその位置から始める。
  */
-// ponytail: 目次・夜間・背景・文字の設定と、音量キーでのめくりはまだない
+// ponytail: 目次・夜間・背景と、音量キーでのめくりはまだない
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
@@ -98,6 +106,8 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
     var pages by remember { mutableIntStateOf(0) }
     val page = if (pages <= 1) 0 else (progress * (pages - 1)).roundToInt()
     var barsShown by remember { mutableStateOf(false) }
+    var panelShown by remember { mutableStateOf(false) }
+    var readerSettings by remember { mutableStateOf(ReaderSettings.load(context)) }
 
     val webView = remember {
         WebView(context).apply {
@@ -122,7 +132,8 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
         val css = assets.open("reader/reader.css").bufferedReader().use { it.readText() }
         val script = assets.open("reader/reader.js").bufferedReader().use { it.readText() }
         // 挿絵や外字の画像を相対パスで読めるよう、本文の URL を基準にする
-        webView.loadDataWithBaseURL(work?.xhtmlUrl, readerHtml(html, css, script), "text/html", "utf-8", null)
+        val page = readerHtml(html, css, readerSettings.cssVariables(), script)
+        webView.loadDataWithBaseURL(work?.xhtmlUrl, page, "text/html", "utf-8", null)
     }
     // ページ数か読了率が変わったら、そのページを見せ、読んだ位置を残す
     LaunchedEffect(page, pages) {
@@ -143,6 +154,7 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
         val from = if (pages <= 1) 0 else (progress * (pages - 1)).roundToInt()
         val to = from + delta
         if (to !in 0 until pages) return
+        if (!readerSettings.slide) return jump(to)
         scope.launch {
             // WebView 自身の drawToBitmap は画面と違う大きさで描くことがあるので、画面に描いたものを写す
             leaving = shown.toImageBitmap()
@@ -230,10 +242,43 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
                         value = page.toFloat(),
                         onValueChange = { jump(it.roundToInt()) },
                         valueRange = 0f..(pages - 1).toFloat(),
+                        colors = SliderDefaults.colors(
+                            inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                        ),
                     )
+                    // ponytail: 目次・夜間・背景は、作るときにこの並びの左に足す
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        BarButton(Icons.Filled.TextFields, "文字") { panelShown = true }
+                    }
                 }
             }
         }
+    }
+    if (panelShown) {
+        TextPanel(
+            readerSettings,
+            onChange = {
+                readerSettings = it
+                it.save(context)
+                // ページ数が変わっても読了率は変わらないので、組み直したあとは同じあたりのページを見せる
+                webView.evaluateJavascript("reader.style('${it.cssVariables()}')", null)
+            },
+            onDismiss = { panelShown = false },
+        )
+    }
+}
+
+/** 下部のバーに並べる、アイコンと名前のボタン。 */
+@Composable
+private fun BarButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+    Column(
+        Modifier.clip(
+            RoundedCornerShape(8.dp),
+        ).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
     }
 }
 

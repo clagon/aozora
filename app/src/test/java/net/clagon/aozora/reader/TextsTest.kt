@@ -21,9 +21,14 @@ class TextsTest {
 	<link rel="stylesheet" type="text/css" href="../../aozora.css" />
 	<script type="text/javascript" src="../../jquery-1.4.2.min.js"></script>
 </head><body>本文</body>"""
-        val html = readerHtml(xhtml, "body{}", "go()")
+        val html = readerHtml(xhtml, "body{}", ":root{}", "go()")
         assertFalse(html.contains("aozora.css"))
         assertFalse(html.contains("jquery"))
-        assertEquals(1, Regex("<style>body\\{\\}</style><script>go\\(\\)</script></head>").findAll(html).count())
+        assertEquals(
+            1,
+            Regex(
+                "<style>body\\{\\}</style><style id=\"reader-vars\">:root\\{\\}</style><script>go\\(\\)</script></head>",
+            ).findAll(html).count(),
+        )
     }
 }
