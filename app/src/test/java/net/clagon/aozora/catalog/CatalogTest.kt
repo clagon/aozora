@@ -74,4 +74,13 @@ class CatalogTest {
         assertEquals(1, counts.of("7", kidsOnly = false))
         assertEquals(0, counts.of("7", kidsOnly = true))
     }
+
+    @Test
+    fun aboutHtmlTakesTheAboutCellOfTheCard() {
+        // 図書カード（card789）の実際の行を短くしたもの
+        val card = """<tr><td class="header">作品について：</td><td>明治38（1905）年1月、「ホトトギス」に発表。<br><a href="http://ja.wikipedia.org/">「吾輩は猫である」</a></td></tr>
+<tr><td class="header">文字遣い種別：</td><td>新字新仮名</td></tr>"""
+        assertEquals("""明治38（1905）年1月、「ホトトギス」に発表。<br><a href="http://ja.wikipedia.org/">「吾輩は猫である」</a>""", aboutHtml(card))
+        assertNull(aboutHtml("""<tr><td class="header">文字遣い種別：</td><td>新字新仮名</td></tr>"""))
+    }
 }

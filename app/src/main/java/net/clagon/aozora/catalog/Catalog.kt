@@ -1,5 +1,6 @@
 package net.clagon.aozora.catalog
 
+import android.text.Html
 import java.io.Reader
 import java.net.HttpURLConnection
 import java.net.URL
@@ -68,11 +69,36 @@ class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
         }
     }
 
+    /**
+     * 作品の「作品について」。残してあればそれを返し、なければ図書カードから取り出して残す。
+     * 図書カードに書かれていなければ空文字、取りに行けなければ null（次に開いたときに取りに行き直す）。
+     */
+    suspend fun about(work: Work): String? {
+        dao.about(work.id)?.let { return it }
+        val about = try {
+            withContext(Dispatchers.IO) {
+                val conn = connect(work.cardUrl)
+                try {
+                    conn.inputStream.reader().use { it.readText() }
+                } finally {
+                    conn.disconnect()
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return null
+        }
+        // Wikipedia のロゴ画像は Html.fromHtml で置換文字になるので先に外す
+        val text = aboutHtml(about)?.replace(Regex("<img[^>]*>"), "")
+            ?.let { Html.fromHtml(it, Html.FROM_HTML_MODE_COMPACT).toString().trim() }.orEmpty()
+        dao.saveNote(WorkNote(work.id, text))
+        return text
+    }
+
     // ponytail: 全件をメモリに載せてから DB に入れる（作品 1.8 万件で数十 MB）。重くなったら行ごとに insert する
     private fun download(): ParsedCatalog {
-        val conn = URL(CATALOG_URL).openConnection() as HttpURLConnection
-        conn.connectTimeout = 15_000
-        conn.readTimeout = 30_000
+        val conn = connect(CATALOG_URL)
         try {
             return ZipInputStream(conn.inputStream.buffered()).use { zip ->
                 generateSequence { zip.nextEntry }.firstOrNull { it.name.endsWith(".csv") }
@@ -84,6 +110,16 @@ class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
         }
     }
 }
+
+/** 青空文庫のサイトへの接続。サイトが応答しないときに待ち続けないよう、時間の上限をつける。 */
+private fun connect(url: String) = (URL(url).openConnection() as HttpURLConnection).apply {
+    connectTimeout = 15_000
+    readTimeout = 30_000
+}
+
+/** 図書カードの HTML から「作品について」の欄の中身（HTML のまま）を取り出す。欄がなければ null。 */
+internal fun aboutHtml(card: String): String? =
+    Regex("""作品について：</td><td>(.*?)</td>""", RegexOption.DOT_MATCHES_ALL).find(card)?.groupValues?.get(1)
 
 /** CSV から読み取ったカタログ全体。[CatalogDao.replaceAll] でそのまま DB に入れる。 */
 class ParsedCatalog(val works: List<Work>, val persons: List<Person>, val credits: List<Credit>)

@@ -16,7 +16,10 @@ class AozoraApp : Application() {
 
     /** カタログの取り込みと参照の入口。初回アクセス時に catalog.db を開く。 */
     val catalog by lazy {
-        val db = Room.databaseBuilder(this, CatalogDatabase::class.java, "catalog.db").build()
+        val db = Room.databaseBuilder(this, CatalogDatabase::class.java, "catalog.db")
+            // 作り直しても、起動時の updateIfEmpty が取り込み直す
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
         Catalog(db.catalogDao(), scope)
     }
 

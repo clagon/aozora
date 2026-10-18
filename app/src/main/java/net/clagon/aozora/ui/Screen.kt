@@ -22,9 +22,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.NDC_CLASSES
+import net.clagon.aozora.catalog.WorkItem
 import net.clagon.aozora.catalog.kanaRange
 import net.clagon.aozora.ui.components.WorkList
 import net.clagon.aozora.ui.search.NdcDivisionList
+import net.clagon.aozora.ui.work.WorkDetailScreen
 
 /** タブの上に積む画面。戻る操作で 1 つずつ外す。 */
 sealed interface Screen {
@@ -49,6 +51,11 @@ sealed interface Screen {
         override val title get() = "作品一覧：$kana"
     }
 
+    /** 作品詳細。見出しは出さず、作品名は本文の上部に大きく出す。 */
+    data class WorkDetail(val workId: Int) : Screen {
+        override val title = ""
+    }
+
     // ponytail: 作家詳細ができるまでの仮の画面。作品を役割ごとに分けずに並べる
     data class PersonWorks(val personId: Int, override val title: String) : Screen
 }
@@ -64,12 +71,14 @@ fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back
             }
             Text(screen.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 56.dp))
         }
+        val open = { work: WorkItem -> push(Screen.WorkDetail(work.id)) }
         when (screen) {
-            Screen.NewWorks -> WorkList(remember { dao.newWorks(Int.MAX_VALUE) })
+            Screen.NewWorks -> WorkList(remember { dao.newWorks(Int.MAX_VALUE) }, open)
             is Screen.Ndc -> NdcDivisionList(screen, catalog, push)
-            is Screen.NdcWorks -> WorkList(remember(screen) { dao.worksByNdc(screen.code, screen.kidsOnly) })
-            is Screen.KanaWorks -> WorkList(remember(screen) { kanaRange(screen.kana).let { dao.worksByYomi(it.from, it.to) } })
-            is Screen.PersonWorks -> WorkList(remember(screen) { dao.worksByPerson(screen.personId) })
+            is Screen.NdcWorks -> WorkList(remember(screen) { dao.worksByNdc(screen.code, screen.kidsOnly) }, open)
+            is Screen.KanaWorks -> WorkList(remember(screen) { kanaRange(screen.kana).let { dao.worksByYomi(it.from, it.to) } }, open)
+            is Screen.PersonWorks -> WorkList(remember(screen) { dao.worksByPerson(screen.personId) }, open)
+            is Screen.WorkDetail -> WorkDetailScreen(screen.workId, catalog, push)
         }
     }
 }
