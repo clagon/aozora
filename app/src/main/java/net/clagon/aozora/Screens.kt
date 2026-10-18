@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -51,7 +52,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -107,16 +108,18 @@ sealed interface Screen {
 
 @Composable
 fun StackedScreen(screen: Screen, dao: CatalogDao, push: (Screen) -> Unit, back: () -> Unit) {
-    Column(Modifier.fillMaxSize()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る") }
-            Text(screen.title, style = MaterialTheme.typography.titleLarge)
+    Column(Modifier.fillMaxSize().systemBarsPadding()) {
+        Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.Center) {
+            IconButton(onClick = back, modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBackIos, contentDescription = "戻る", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(screen.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 56.dp))
         }
         when (screen) {
             Screen.NewWorks -> WorkList(remember { dao.newWorks(Int.MAX_VALUE) })
             is Screen.Ndc -> LazyColumn {
                 items(NDC_CLASSES[screen.digit].codes) { (code, name) ->
-                    NavItem("$code $name") { push(Screen.NdcWorks(code, name)) }
+                    NdcDivisionRow(code, name, dao) { push(Screen.NdcWorks(code, name)) }
                 }
             }
             is Screen.NdcWorks -> WorkList(remember(screen) { dao.worksByNdc(screen.code) })
@@ -329,7 +332,7 @@ fun LibraryScreen(dao: CatalogDao, push: (Screen) -> Unit) {
 @Composable
 private fun NdcCard(digit: Int, name: String, dao: CatalogDao, onClick: () -> Unit) {
     val (color, icon) = NDC_CARD_STYLES[digit]
-    val count by remember(digit) { dao.ndcClassCount(digit.toString()) }.collectAsState(null)
+    val count by remember(digit) { dao.ndcCount(digit.toString()) }.collectAsState(null)
     Box(Modifier.aspectRatio(1.66f).clip(RoundedCornerShape(6.dp)).background(color).clickable(onClick = onClick).padding(14.dp)) {
         Column {
             Text(name, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium)
@@ -377,6 +380,27 @@ private fun LazyListScope.workItems(works: List<WorkItem>) {
             supportingContent = { Text(listOfNotNull(it.subtitle.ifEmpty { null }, it.authors).joinToString("\n")) },
         )
         HorizontalDivider()
+    }
+}
+
+/** 第 2 次区分の行。番号・名前・件数を並べ、作品のない区分は薄くして押せなくする。 */
+@Composable
+private fun NdcDivisionRow(code: String, name: String, dao: CatalogDao, onClick: () -> Unit) {
+    val count by remember(code) { dao.ndcCount(code) }.collectAsState(null)
+    val empty = count == 0
+    Row(
+        Modifier.fillMaxWidth().clickable(enabled = count?.let { it > 0 } == true, onClick = onClick).padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(code, color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(56.dp))
+        Text(
+            name,
+            color = if (empty) MaterialTheme.colorScheme.outlineVariant else MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f),
+        )
+        count?.takeIf { it > 0 }?.let { Text("%,d件".format(it), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium) }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 

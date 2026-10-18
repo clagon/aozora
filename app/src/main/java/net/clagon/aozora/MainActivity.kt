@@ -7,6 +7,15 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.unit.IntOffset
+import net.clagon.aozora.catalog.Catalog
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -66,6 +75,8 @@ private enum class Tab(val label: String, val icon: ImageVector, val selectedIco
     Other("その他", Icons.Filled.MoreHoriz, Icons.Filled.MoreHoriz),
 }
 
+private const val SLIDE_MILLIS = 300
+
 @Composable
 private fun App() {
     val catalog = (LocalContext.current.applicationContext as AozoraApp).catalog
@@ -75,6 +86,37 @@ private fun App() {
     val push: (Screen) -> Unit = { stack += it }
     val back = { stack.removeAt(stack.lastIndex) }
     BackHandler(enabled = stack.isNotEmpty()) { back() }
+    // 画面を離れて戻ってきたときに、タブの選択やスクロール位置を残しておく
+    val saveableState = rememberSaveableStateHolder()
+    AnimatedContent(
+        targetState = stack.toList(),
+        transitionSpec = {
+            val slide = tween<IntOffset>(SLIDE_MILLIS)
+            if (targetState.size > initialState.size) {
+                // 開く: 右からスライドインし、元の画面は少し左へずれる
+                slideInHorizontally(slide) { it } togetherWith slideOutHorizontally(slide) { -it / 4 }
+            } else {
+                // 戻る: 今の画面が右へ抜け、下の画面が戻ってくる。抜ける画面を手前に描く
+                (slideInHorizontally(slide) { -it / 4 } togetherWith slideOutHorizontally(slide) { it }).apply { targetContentZIndex = -1f }
+            }
+        },
+        label = "screen",
+    ) { screens ->
+        val top = screens.lastOrNull()
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            saveableState.SaveableStateProvider(if (top == null) "root" else "${screens.size}:$top") {
+                if (top != null) {
+                    StackedScreen(top, catalog.dao, push) { back() }
+                } else {
+                    TabRoot(tab, catalog, push) { tab = it }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabRoot(tab: Tab, catalog: Catalog, push: (Screen) -> Unit, select: (Tab) -> Unit) {
     Scaffold(
         bottomBar = { Column {
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -82,7 +124,7 @@ private fun App() {
                 Tab.entries.forEach {
                     NavigationBarItem(
                         selected = it == tab,
-                        onClick = { tab = it; stack.clear() },
+                        onClick = { select(it) },
                         icon = { Icon(if (it == tab) it.selectedIcon else it.icon, contentDescription = null) },
                         label = { Text(it.label) },
                         colors = NavigationBarItemDefaults.colors(
@@ -98,14 +140,12 @@ private fun App() {
         } },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            val top = stack.lastOrNull()
-            when {
-                top != null -> StackedScreen(top, catalog.dao, push) { back() }
-                tab == Tab.Home -> HomeScreen(catalog, push)
-                tab == Tab.Library -> LibraryScreen(catalog.dao, push)
+            when (tab) {
+                Tab.Home -> HomeScreen(catalog, push)
+                Tab.Library -> LibraryScreen(catalog.dao, push)
                 // ponytail: 本棚とその他の中身は未実装。それまではその他にカタログの状態を出しておく
-                tab == Tab.Other -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CatalogStatus(catalog) }
-                else -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tab.label) }
+                Tab.Other -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CatalogStatus(catalog) }
+                Tab.Bookshelf -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tab.label) }
             }
         }
     }

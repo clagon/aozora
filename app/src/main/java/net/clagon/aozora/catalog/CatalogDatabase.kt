@@ -101,9 +101,9 @@ abstract class CatalogDao {
     @Query("$WORK_ITEM WHERE ' ' || w.ndc LIKE '% ' || :code || '%' OR ' ' || w.ndc LIKE '% K' || :code || '%' ORDER BY w.sortYomi")
     abstract fun worksByNdc(code: String): Flow<List<WorkItem>>
 
-    /** worksByNdc と同じ条件で、第 1 次区分（digit は 1 桁）ごとの件数を数える。 */
-    @Query("SELECT COUNT(*) FROM works WHERE ' ' || ndc LIKE '% ' || :digit || '%' OR ' ' || ndc LIKE '% K' || :digit || '%'")
-    abstract fun ndcClassCount(digit: String): Flow<Int>
+    /** worksByNdc と同じ条件で件数を数える。code は上 1 桁（第 1 次区分）でも上 2 桁（第 2 次区分）でもよい。 */
+    @Query("SELECT COUNT(*) FROM works WHERE ' ' || ndc LIKE '% ' || :code || '%' OR ' ' || ndc LIKE '% K' || :code || '%'")
+    abstract fun ndcCount(code: String): Flow<Int>
 
     @Query("$WORK_ITEM WHERE w.sortYomi >= :from AND w.sortYomi < :to AND (:kidsOnly = 0 OR w.ndc LIKE '%K%') ORDER BY w.sortYomi")
     abstract fun worksByYomi(from: String, to: String, kidsOnly: Boolean): Flow<List<WorkItem>>
