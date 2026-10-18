@@ -64,7 +64,11 @@ fun NdcGrid(counts: NdcCounts?, kidsOnly: Boolean, push: (Screen) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        items(NDC_CLASSES) { NdcCard(it.digit, it.name, counts.of(it.digit.toString(), kidsOnly)) { push(Screen.Ndc(it.digit, kidsOnly)) } }
+        items(NDC_CLASSES) {
+            NdcCard(it.digit, it.name, counts.of(it.digit.toString(), kidsOnly)) {
+                push(Screen.Ndc(it.digit, kidsOnly))
+            }
+        }
     }
 }
 
@@ -79,9 +83,23 @@ private fun NdcCard(digit: Int, name: String, count: Int, onClick: () -> Unit) {
             .clickable(enabled = !empty, onClick = onClick).padding(14.dp),
     ) {
         Column {
-            Text(name, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium)
-            Text("%,d件".format(count), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                name,
+                color = Color.White,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                "%,d件".format(count),
+                color = Color.White.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodyLarge,
+            )
         }
-        Icon(icon, contentDescription = null, tint = Color.White.copy(alpha = 0.25f), modifier = Modifier.align(Alignment.BottomEnd).size(56.dp))
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.25f),
+            modifier = Modifier.align(Alignment.BottomEnd).size(56.dp),
+        )
     }
 }

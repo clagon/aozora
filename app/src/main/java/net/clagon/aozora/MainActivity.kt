@@ -1,6 +1,5 @@
 package net.clagon.aozora
 
-import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -10,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import net.clagon.aozora.ui.App
+import android.graphics.Color as AndroidColor
 
 /** 唯一の Activity。システムバーの見た目とテーマを決め、画面はすべて [App] に任せる。 */
 class MainActivity : ComponentActivity() {
@@ -21,7 +21,14 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             // ponytail: カラーモード（システム・ライト・ダーク。既定はシステム）の設定を作るまでは、ライトで固定する
-            MaterialTheme(colorScheme = lightColorScheme(primary = Accent, background = Color.White, surface = Color.White, surfaceContainerHigh = Color(0xFFF0F2F4))) {
+            MaterialTheme(
+                colorScheme = lightColorScheme(
+                    primary = Accent,
+                    background = Color.White,
+                    surface = Color.White,
+                    surfaceContainerHigh = Color(0xFFF0F2F4),
+                ),
+            ) {
                 App()
             }
         }

@@ -59,7 +59,10 @@ private enum class Tab(val label: String, val icon: ImageVector, val selectedIco
 /** タブの画面の上に画面を積んで遷移する、アプリ全体の枠。 */
 @Composable
 fun App() {
+    // アプリ共通のデータを取得
     val catalog = (LocalContext.current.applicationContext as AozoraApp).catalog
+
+    // タブや画面履歴などの状態を準備
     var tab by rememberSaveableEnum(Tab.Home)
     // ponytail: 画面の積み上げは回転などで作り直されると消える。困ったら Navigation を入れる
     val stack = remember { mutableStateListOf<Screen>() }
@@ -68,6 +71,8 @@ fun App() {
     BackHandler(enabled = stack.isNotEmpty()) { back() }
     // 画面を離れて戻ってきたときに、タブの選択やスクロール位置を残しておく
     val saveableState = rememberSaveableStateHolder()
+
+    // 状態に応じた画面をアニメーション付きで表示
     AnimatedContent(
         targetState = stack.toList(),
         transitionSpec = {
@@ -77,7 +82,10 @@ fun App() {
                 slideInHorizontally(slide) { it } togetherWith slideOutHorizontally(slide) { -it / 4 }
             } else {
                 // 戻る: 今の画面が右へ抜け、下の画面が戻ってくる。抜ける画面を手前に描く
-                (slideInHorizontally(slide) { -it / 4 } togetherWith slideOutHorizontally(slide) { it }).apply { targetContentZIndex = -1f }
+                (slideInHorizontally(slide) { -it / 4 } togetherWith slideOutHorizontally(slide) { it }).apply {
+                    targetContentZIndex =
+                        -1f
+                }
             }
         },
         label = "screen",
@@ -99,33 +107,38 @@ fun App() {
 @Composable
 private fun TabRoot(tab: Tab, catalog: Catalog, push: (Screen) -> Unit, select: (Tab) -> Unit) {
     Scaffold(
-        bottomBar = { Column {
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
-                Tab.entries.forEach {
-                    NavigationBarItem(
-                        selected = it == tab,
-                        onClick = { select(it) },
-                        icon = { Icon(if (it == tab) it.selectedIcon else it.icon, contentDescription = null) },
-                        label = { Text(it.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            unselectedIconColor = MaterialTheme.colorScheme.outline,
-                            unselectedTextColor = MaterialTheme.colorScheme.outline,
-                            indicatorColor = Color.Transparent,
-                        ),
-                    )
+        bottomBar = {
+            Column {
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                    Tab.entries.forEach {
+                        NavigationBarItem(
+                            selected = it == tab,
+                            onClick = { select(it) },
+                            icon = { Icon(if (it == tab) it.selectedIcon else it.icon, contentDescription = null) },
+                            label = { Text(it.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.outline,
+                                unselectedTextColor = MaterialTheme.colorScheme.outline,
+                                indicatorColor = Color.Transparent,
+                            ),
+                        )
+                    }
                 }
             }
-        } },
+        },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (tab) {
                 Tab.Home -> HomeScreen(catalog, push)
+
                 Tab.Search -> SearchScreen(catalog, push)
+
                 // ponytail: 本棚とその他の中身は未実装。それまではその他にカタログの状態を出しておく
                 Tab.Other -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CatalogStatus(catalog) }
+
                 Tab.Bookshelf -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tab.label) }
             }
         }

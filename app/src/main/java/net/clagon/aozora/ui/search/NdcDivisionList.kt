@@ -28,7 +28,9 @@ fun NdcDivisionList(screen: Screen.Ndc, catalog: Catalog, push: (Screen) -> Unit
     val counts = catalog.ndcCounts.collectAsState().value ?: return
     LazyColumn {
         items(NDC_CLASSES[screen.digit].codes) { (code, name) ->
-            NdcDivisionRow(code, name, counts.of(code, screen.kidsOnly)) { push(Screen.NdcWorks(code, name, screen.kidsOnly)) }
+            NdcDivisionRow(code, name, counts.of(code, screen.kidsOnly)) {
+                push(Screen.NdcWorks(code, name, screen.kidsOnly))
+            }
         }
     }
 }
@@ -38,17 +40,35 @@ fun NdcDivisionList(screen: Screen.Ndc, catalog: Catalog, push: (Screen) -> Unit
 private fun NdcDivisionRow(code: String, name: String, count: Int, onClick: () -> Unit) {
     val empty = count == 0
     Row(
-        Modifier.fillMaxWidth().clickable(enabled = !empty, onClick = onClick).padding(horizontal = 20.dp, vertical = 18.dp),
+        Modifier.fillMaxWidth().clickable(
+            enabled = !empty,
+            onClick = onClick,
+        ).padding(horizontal = 20.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(code, color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.width(56.dp))
+        Text(
+            code,
+            color = MaterialTheme.colorScheme.outline,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.width(56.dp),
+        )
         Text(
             name,
             color = if (empty) MaterialTheme.colorScheme.outlineVariant else MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.weight(1f),
         )
-        if (!empty) Text("%,d件".format(count), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium)
-        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant)
+        if (!empty) {
+            Text(
+                "%,d件".format(count),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.outlineVariant,
+        )
     }
 }

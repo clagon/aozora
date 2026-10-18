@@ -13,10 +13,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
  * 更新したあとに前の状態を復元すると失敗する。ここでは名前の文字列で保存し、知らない名前なら initial に戻す。
  */
 @Composable
-inline fun <reified E : Enum<E>> rememberSaveableEnum(initial: E): MutableState<E> =
-    rememberSaveable(
-        saver = Saver<MutableState<E>, String>(
-            save = { it.value.name },
-            restore = { name -> mutableStateOf(enumValues<E>().firstOrNull { it.name == name } ?: initial) },
-        ),
-    ) { mutableStateOf(initial) }
+inline fun <reified E : Enum<E>> rememberSaveableEnum(initial: E): MutableState<E> = rememberSaveable(
+    saver = Saver<MutableState<E>, String>(
+        save = { it.value.name },
+        restore = { name -> mutableStateOf(enumValues<E>().firstOrNull { it.name == name } ?: initial) },
+    ),
+) { mutableStateOf(initial) }

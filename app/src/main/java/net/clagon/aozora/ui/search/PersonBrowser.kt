@@ -44,7 +44,11 @@ fun PersonBrowser(dao: CatalogDao, push: (Screen) -> Unit) {
     var selected by rememberSaveableEnum(KanaRow.A)
     val persons by remember(selected) { dao.personsByYomi(selected.range.from, selected.range.to) }.collectAsState(null)
     Row(Modifier.fillMaxSize()) {
-        Column(Modifier.width(88.dp).fillMaxHeight().background(MaterialTheme.colorScheme.surfaceContainerHigh).verticalScroll(rememberScrollState())) {
+        Column(
+            Modifier.width(88.dp).fillMaxHeight()
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .verticalScroll(rememberScrollState()),
+        ) {
             KanaRow.entries.forEach { row ->
                 val isSelected = row == selected
                 Box(
@@ -54,9 +58,14 @@ fun PersonBrowser(dao: CatalogDao, push: (Screen) -> Unit) {
                     contentAlignment = Alignment.Center,
                 ) {
                     if (isSelected) {
-                        Box(Modifier.align(Alignment.CenterStart).width(3.dp).height(24.dp).background(MaterialTheme.colorScheme.primary))
+                        val bar = Modifier.align(Alignment.CenterStart).width(3.dp).height(24.dp)
+                        Box(bar.background(MaterialTheme.colorScheme.primary))
                     }
-                    Text(row.label, color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        row.label,
+                        color = MaterialTheme.colorScheme.run { if (isSelected) primary else outline },
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
                 }
             }
         }
@@ -69,7 +78,9 @@ fun PersonBrowser(dao: CatalogDao, push: (Screen) -> Unit) {
                         initial,
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth().background(
+                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ).padding(horizontal = 16.dp, vertical = 4.dp),
                     )
                 }
                 personItems(group, push)
@@ -82,14 +93,24 @@ fun PersonBrowser(dao: CatalogDao, push: (Screen) -> Unit) {
 private fun LazyListScope.personItems(persons: List<PersonItem>, push: (Screen) -> Unit) {
     items(persons, key = { it.id }) {
         Row(
-            Modifier.fillMaxWidth().clickable { push(Screen.PersonWorks(it.id, it.name)) }.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+            Modifier.fillMaxWidth().clickable {
+                push(Screen.PersonWorks(it.id, it.name))
+            }.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
                 Text(it.name, style = MaterialTheme.typography.titleMedium)
-                Text("公開中：${it.workCount}", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "公開中：${it.workCount}",
+                    color = MaterialTheme.colorScheme.outline,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant)
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.outlineVariant,
+            )
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
     }
