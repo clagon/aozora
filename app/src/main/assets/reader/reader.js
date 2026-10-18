@@ -8,14 +8,26 @@
         });
     }
 
+    // 見出し（大・中・小 = h3・h4・h5）と、それが載っているページ。目次と前後の章への移動に使う。
+    // 1 行に 1 つ「階層<TAB>ページ<TAB>見出し」の形で返す（Heading.kt の parseHeadings が読む）
+    function headings() {
+        var levels = { H3: 0, H4: 1, H5: 2 };
+        var found = document.querySelectorAll('.main_text h3, .main_text h4, .main_text h5');
+        return Array.prototype.map.call(found, function (el) {
+            var page = Math.floor((el.getBoundingClientRect().top + window.scrollY) / window.innerHeight);
+            return levels[el.tagName] + '\t' + page + '\t' + el.textContent.replace(/\s+/g, ' ').trim();
+        }).join('\n');
+    }
+
     // 段は画面の高さごとに並ぶので、文書の高さを画面の高さで割ったものがページ数
     function layout() {
         if (window.innerHeight === 0) return;
         var root = document.documentElement.style;
         root.setProperty('--page-width', window.innerWidth + 'px');
         root.setProperty('--page-height', window.innerHeight + 'px');
+        document.documentElement.classList.add('paged');
         var pages = Math.max(1, Math.round(document.documentElement.scrollHeight / window.innerHeight));
-        Android.onLayout(pages);
+        Android.onLayout(pages, headings());
     }
 
     window.reader = {
@@ -30,7 +42,12 @@
         },
     };
 
-    document.addEventListener('DOMContentLoaded', verticalIndents);
+    // 本文が読めた時点で組み、画像（外字・挿絵）が揃って大きさが変わったらもう一度組む。
+    // 外字の多い作品は画像が揃うまで時間がかかるので、load だけを待つと長いあいだ組まれないままになる
+    document.addEventListener('DOMContentLoaded', function () {
+        verticalIndents();
+        layout();
+    });
     window.addEventListener('load', layout);
     window.addEventListener('resize', layout);
 })();

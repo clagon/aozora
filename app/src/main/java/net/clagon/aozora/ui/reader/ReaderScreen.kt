@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -64,7 +66,12 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import net.clagon.aozora.AozoraApp
 import net.clagon.aozora.catalog.Catalog
+import net.clagon.aozora.reader.Heading
 import net.clagon.aozora.reader.ReaderSettings
+import net.clagon.aozora.reader.current
+import net.clagon.aozora.reader.nextChapter
+import net.clagon.aozora.reader.parseHeadings
+import net.clagon.aozora.reader.previousChapter
 import net.clagon.aozora.reader.readerHtml
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
@@ -79,10 +86,10 @@ private const val SWIPE_DP = 48
  * 本文を縦書きで 1 ページずつ読む画面。本文は WebView に段組みで描き（assets/reader）、
  * めくる操作はその上に重ねた透明な層で受ける。
  * - 左側のタップか右へのスワイプ（紙の本のようにページを右へ送る）で次のページ、右側のタップか左へのスワイプで前のページ。
- * - 中央のタップで、戻るボタンとページのスライダー、文字パネルを開くボタンを出し入れする。
+ * - 中央のタップで、戻るボタン、ページのスライダーと前後の章への移動、目次と文字パネルを開くボタンを出し入れする。
  * 読んだ位置は読了率（0〜1）で作品ごとに残し、次に開いたときにその位置から始める。
  */
-// ponytail: 目次・夜間・背景と、音量キーでのめくりはまだない
+// ponytail: 夜間・背景と、音量キーでのめくりはまだない
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
@@ -107,6 +114,9 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
     val page = if (pages <= 1) 0 else (progress * (pages - 1)).roundToInt()
     var barsShown by remember { mutableStateOf(false) }
     var panelShown by remember { mutableStateOf(false) }
+    var tocShown by remember { mutableStateOf(false) }
+    // 見出しとそのページ。段組みをやり直すたびに数え直す
+    var headings by remember { mutableStateOf(emptyList<Heading>()) }
     var readerSettings by remember { mutableStateOf(ReaderSettings.load(context)) }
 
     val webView = remember {
@@ -119,7 +129,10 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
                 object {
                     // JavaScript のスレッドから呼ばれるので、画面のスレッドに移してから状態を変える
                     @JavascriptInterface
-                    fun onLayout(count: Int) = post { pages = count }
+                    fun onLayout(count: Int, found: String) = post {
+                        pages = count
+                        headings = parseHeadings(found)
+                    }
                 },
                 "Android",
             )
@@ -237,23 +250,42 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     .navigationBarsPadding().padding(horizontal = 24.dp, vertical = 12.dp),
             ) {
-                // 1 ページしかない作品では動かす先がないので、スライダーだけ出さない
+                // 1 ページしかない作品では動かす先がないので、スライダーと章の移動は出さない
                 if (pages > 1) {
-                    Slider(
-                        value = page.toFloat(),
-                        onValueChange = { jump(it.roundToInt()) },
-                        valueRange = 0f..(pages - 1).toFloat(),
-                        colors = SliderDefaults.colors(
-                            inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                        ),
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val previous = headings.previousChapter(page)
+                        val next = headings.nextChapter(page)
+                        TextButton(onClick = { previous?.let(::jump) }, enabled = previous != null) { Text("前の章") }
+                        Slider(
+                            value = page.toFloat(),
+                            onValueChange = { jump(it.roundToInt()) },
+                            valueRange = 0f..(pages - 1).toFloat(),
+                            colors = SliderDefaults.colors(
+                                inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { next?.let(::jump) }, enabled = next != null) { Text("次の章") }
+                    }
                 }
-                // ponytail: 目次・夜間・背景は、作るときにこの並びの左に足す
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                // ponytail: 夜間・背景は、作るときに目次と文字のあいだに足す
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                    BarButton(Icons.AutoMirrored.Filled.List, "目次") { tocShown = true }
                     BarButton(Icons.Filled.TextFields, "文字") { panelShown = true }
                 }
             }
         }
+    }
+    if (tocShown) {
+        TocPanel(
+            headings,
+            headings.current(page),
+            onSelect = {
+                jump(it.page)
+                tocShown = false
+            },
+            onDismiss = { tocShown = false },
+        )
     }
     if (panelShown) {
         TextPanel(

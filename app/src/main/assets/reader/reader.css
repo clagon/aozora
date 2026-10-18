@@ -4,6 +4,8 @@
  * --margin-x は左右（行の並ぶ方向）、--margin-y は上下（文字の並ぶ方向）の余白。
  * 文字サイズ・行間・余白は文字パネルの設定で、アプリが別の style（#reader-vars）で上書きする（ReaderSettings）。
  * --page-width と --page-height は画面の大きさで、reader.js が入れる（WebView の大きさが決まる前は vh が 0 になるため）。
+ * 大きさが入るまでは本文を組まない（html に paged がつくまで隠す）。大きさのない段組みは 1 段 1 文字になり、
+ * 長い作品ではそれを組むだけで止まってしまう。
  */
 :root {
     --font-size: 18px;
@@ -12,6 +14,10 @@
     --margin-y: 40px;
     --page-width: 100vw;
     --page-height: 100vh;
+}
+
+html:not(.paged) body {
+    display: none;
 }
 
 html {
