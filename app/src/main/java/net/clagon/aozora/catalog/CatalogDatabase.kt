@@ -83,8 +83,8 @@ data class WorkItem(
     val authors: String?,
 )
 
-/** 作家一覧の 1 行。workCount は役割を問わず関わった公開作品の数。 */
-data class PersonItem(val id: Int, val lastName: String, val firstName: String, val workCount: Int) {
+/** 作家一覧の 1 行。workCount は役割を問わず関わった公開作品の数。lastNameSort は見出しの頭文字に使う。 */
+data class PersonItem(val id: Int, val lastName: String, val firstName: String, val lastNameSort: String, val workCount: Int) {
     val name get() = "$lastName $firstName".trim()
 }
 
@@ -128,7 +128,7 @@ abstract class CatalogDao {
     abstract fun worksByPerson(personId: Int): Flow<List<WorkItem>>
 
     @Query("""
-        SELECT p.id, p.lastName, p.firstName,
+        SELECT p.id, p.lastName, p.firstName, p.lastNameSort,
             (SELECT COUNT(DISTINCT c.workId) FROM credits c WHERE c.personId = p.id) AS workCount
         FROM persons p WHERE $PERSON_IN_YOMI ORDER BY p.lastNameSort, p.firstNameSort""")
     abstract fun personsByYomi(from: String, to: String): Flow<List<PersonItem>>

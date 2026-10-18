@@ -52,6 +52,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -85,6 +86,7 @@ import net.clagon.aozora.catalog.KANA_GRID
 import net.clagon.aozora.catalog.KanaRow
 import net.clagon.aozora.catalog.kanaRange
 import net.clagon.aozora.catalog.NDC_CLASSES
+import net.clagon.aozora.catalog.PersonItem
 import net.clagon.aozora.catalog.WorkItem
 
 /** タブの上に積む画面。戻る操作で 1 つずつ外す。 */
@@ -353,20 +355,35 @@ private fun PersonBrowser(dao: CatalogDao, push: (Screen) -> Unit) {
         }
         // 行を切り替えたら一覧の先頭に戻す
         LazyColumn(Modifier.weight(1f), state = remember(selected) { LazyListState() }) {
-            items(persons.orEmpty(), key = { it.id }) {
-                Row(
-                    Modifier.fillMaxWidth().clickable { push(Screen.PersonWorks(it.id, it.name)) }.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(it.name, style = MaterialTheme.typography.titleMedium)
-                        Text("公開中：${it.workCount}", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
-                    }
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant)
+            // 読みの頭文字ごとに見出しを挟む。見出しはスクロール中も上端に残り、今どのあたりかを示す
+            persons.orEmpty().groupBy { it.lastNameSort.take(1) }.forEach { (initial, group) ->
+                stickyHeader(key = "header:$initial") {
+                    Text(
+                        initial,
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+                personItems(group, push)
             }
         }
+    }
+}
+
+private fun LazyListScope.personItems(persons: List<PersonItem>, push: (Screen) -> Unit) {
+    items(persons, key = { it.id }) {
+        Row(
+            Modifier.fillMaxWidth().clickable { push(Screen.PersonWorks(it.id, it.name)) }.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(it.name, style = MaterialTheme.typography.titleMedium)
+                Text("公開中：${it.workCount}", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant)
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
     }
 }
 
