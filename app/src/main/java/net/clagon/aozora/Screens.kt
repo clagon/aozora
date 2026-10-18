@@ -45,11 +45,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
@@ -58,7 +61,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
@@ -67,6 +69,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -77,7 +80,9 @@ import kotlinx.coroutines.flow.Flow
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogDao
 import net.clagon.aozora.catalog.CatalogState
+import net.clagon.aozora.catalog.KANA_GRID
 import net.clagon.aozora.catalog.KanaRow
+import net.clagon.aozora.catalog.kanaRange
 import net.clagon.aozora.catalog.NDC_CLASSES
 import net.clagon.aozora.catalog.WorkItem
 
@@ -89,17 +94,16 @@ sealed interface Screen {
         override val title = "新着作品"
     }
 
-    data class Ndc(val digit: Int) : Screen {
+    /** 分野の第 2 次区分の一覧。kidsOnly なら児童書だけを数える。 */
+    data class Ndc(val digit: Int, val kidsOnly: Boolean) : Screen {
         override val title get() = NDC_CLASSES[digit].name
     }
 
-    data class NdcWorks(val code: String, override val title: String) : Screen
-    data class Persons(val row: KanaRow) : Screen {
-        override val title get() = "作家（${row.label}行）"
-    }
+    data class NdcWorks(val code: String, override val title: String, val kidsOnly: Boolean) : Screen
 
-    data class Works(val row: KanaRow, val kidsOnly: Boolean) : Screen {
-        override val title get() = "${if (kidsOnly) "児童書" else "作品"}（${row.label}行）"
+    /** 作品別で選んだ 1 文字で始まる作品の一覧。 */
+    data class KanaWorks(val kana: String) : Screen {
+        override val title get() = "作品一覧：$kana"
     }
 
     // ponytail: 作家詳細ができるまでの仮の画面。作品を役割ごとに分けずに並べる
@@ -119,21 +123,12 @@ fun StackedScreen(screen: Screen, dao: CatalogDao, push: (Screen) -> Unit, back:
             Screen.NewWorks -> WorkList(remember { dao.newWorks(Int.MAX_VALUE) })
             is Screen.Ndc -> LazyColumn {
                 items(NDC_CLASSES[screen.digit].codes) { (code, name) ->
-                    NdcDivisionRow(code, name, dao) { push(Screen.NdcWorks(code, name)) }
+                    NdcDivisionRow(code, name, dao, screen.kidsOnly) { push(Screen.NdcWorks(code, name, screen.kidsOnly)) }
                 }
             }
-            is Screen.NdcWorks -> WorkList(remember(screen) { dao.worksByNdc(screen.code) })
-            is Screen.Works -> WorkList(remember(screen) { dao.worksByYomi(screen.row.from, screen.row.to, screen.kidsOnly) })
+            is Screen.NdcWorks -> WorkList(remember(screen) { dao.worksByNdc(screen.code, screen.kidsOnly) })
+            is Screen.KanaWorks -> WorkList(remember(screen) { kanaRange(screen.kana).let { dao.worksByYomi(it.from, it.to) } }, numbered = true)
             is Screen.PersonWorks -> WorkList(remember(screen) { dao.worksByPerson(screen.personId) })
-            is Screen.Persons -> {
-                val persons by remember(screen) { dao.personsByYomi(screen.row.from, screen.row.to) }.collectAsState(null)
-                LazyColumn {
-                    items(persons.orEmpty(), key = { it.id }) {
-                        val name = "${it.lastName} ${it.firstName}".trim()
-                        NavItem(name) { push(Screen.PersonWorks(it.id, name)) }
-                    }
-                }
-            }
         }
     }
 }
@@ -230,7 +225,7 @@ private val PAPER_FLECK = Color(0x40A08C70)
 
 /** 和紙風の表紙。上に作品名、下の帯に著者名を置き、細い線を 2 本ずつ添える。 */
 @Composable
-fun BookCover(work: WorkItem, modifier: Modifier = Modifier) {
+fun BookCover(work: WorkItem, modifier: Modifier = Modifier, small: Boolean = false) {
     val (ink, band) = COVER_COLORS[work.id.mod(COVER_COLORS.size)]
     Column(
         modifier.aspectRatio(0.72f).shadow(1.dp, RoundedCornerShape(3.dp)).background(PAPER).drawBehind {
@@ -249,8 +244,8 @@ fun BookCover(work: WorkItem, modifier: Modifier = Modifier) {
             drawLine(band, Offset(0f, 9.dp.toPx()), Offset(size.width * 0.2f, 9.dp.toPx()), stroke)
         },
     ) {
-        Box(Modifier.weight(0.68f).fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 24.dp), contentAlignment = Alignment.TopCenter) {
-            Text(work.title, color = ink, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, style = MaterialTheme.typography.titleSmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        Box(Modifier.weight(0.68f).fillMaxWidth().padding(horizontal = if (small) 4.dp else 8.dp).padding(top = if (small) 14.dp else 24.dp), contentAlignment = Alignment.TopCenter) {
+            Text(work.title, color = ink, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, style = if (small) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleSmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
         }
         Box(
             Modifier.weight(0.32f).fillMaxWidth().background(band).drawBehind {
@@ -261,7 +256,7 @@ fun BookCover(work: WorkItem, modifier: Modifier = Modifier) {
             },
             contentAlignment = Alignment.Center,
         ) {
-            Text(work.authors.orEmpty(), color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 6.dp))
+            Text(work.authors.orEmpty(), color = Color.White.copy(alpha = 0.9f), style = if (small) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 6.dp))
         }
     }
 }
@@ -308,21 +303,86 @@ fun LibraryScreen(dao: CatalogDao, push: (Screen) -> Unit) {
                 )
             }
         }
-        if (selected == 0) {
-            LazyVerticalGrid(
-                GridCells.Fixed(2),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-            ) {
-                items(NDC_CLASSES) { NdcCard(it.digit, it.name, dao) { push(Screen.Ndc(it.digit)) } }
-            }
-        } else {
-            LazyColumn {
-                items(KanaRow.entries) { row ->
-                    NavItem("${row.label}行") {
-                        push(if (selected == 1) Screen.Persons(row) else Screen.Works(row, kidsOnly = selected == 3))
+        when (selected) {
+            0 -> NdcGrid(dao, kidsOnly = false, push)
+            1 -> PersonBrowser(dao, push)
+            2 -> KanaGrid(push)
+            else -> NdcGrid(dao, kidsOnly = true, push)
+        }
+    }
+}
+
+@Composable
+private fun NdcGrid(dao: CatalogDao, kidsOnly: Boolean, push: (Screen) -> Unit) {
+    LazyVerticalGrid(
+        GridCells.Fixed(2),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        items(NDC_CLASSES) { NdcCard(it.digit, it.name, dao, kidsOnly) { push(Screen.Ndc(it.digit, kidsOnly)) } }
+    }
+}
+
+/** 作家別。左に五十音の行の縦タブ、右に選んだ行の作家一覧を並べる。 */
+@Composable
+private fun PersonBrowser(dao: CatalogDao, push: (Screen) -> Unit) {
+    var selected by rememberSaveable { mutableStateOf(KanaRow.A) }
+    val persons by remember(selected) { dao.personsByYomi(selected.range.from, selected.range.to) }.collectAsState(null)
+    Row(Modifier.fillMaxSize()) {
+        Column(Modifier.width(88.dp).fillMaxHeight().background(MaterialTheme.colorScheme.surfaceContainerHigh).verticalScroll(rememberScrollState())) {
+            KanaRow.entries.forEach { row ->
+                val isSelected = row == selected
+                Box(
+                    Modifier.fillMaxWidth().height(60.dp)
+                        .background(if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
+                        .clickable { selected = row },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isSelected) {
+                        Box(Modifier.align(Alignment.CenterStart).width(3.dp).height(24.dp).background(MaterialTheme.colorScheme.primary))
                     }
+                    Text(row.label, color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+        // 行を切り替えたら一覧の先頭に戻す
+        LazyColumn(Modifier.weight(1f), state = remember(selected) { LazyListState() }) {
+            items(persons.orEmpty(), key = { it.id }) {
+                Row(
+                    Modifier.fillMaxWidth().clickable { push(Screen.PersonWorks(it.id, it.name)) }.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(it.name, style = MaterialTheme.typography.titleMedium)
+                        Text("公開中：${it.workCount}", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant)
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+            }
+        }
+    }
+}
+
+/** 作品別。五十音の 1 文字ずつのボタンを 5 列の格子に並べる。 */
+@Composable
+private fun KanaGrid(push: (Screen) -> Unit) {
+    LazyVerticalGrid(
+        GridCells.Fixed(5),
+        contentPadding = PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        items(KANA_GRID) { kana ->
+            if (kana == null) {
+                Spacer(Modifier.aspectRatio(1.4f))
+            } else {
+                Box(
+                    Modifier.aspectRatio(1.4f).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable { push(Screen.KanaWorks(kana)) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(kana, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -330,9 +390,9 @@ fun LibraryScreen(dao: CatalogDao, push: (Screen) -> Unit) {
 }
 
 @Composable
-private fun NdcCard(digit: Int, name: String, dao: CatalogDao, onClick: () -> Unit) {
+private fun NdcCard(digit: Int, name: String, dao: CatalogDao, kidsOnly: Boolean, onClick: () -> Unit) {
     val (color, icon) = NDC_CARD_STYLES[digit]
-    val count by remember(digit) { dao.ndcCount(digit.toString()) }.collectAsState(null)
+    val count by remember(digit, kidsOnly) { dao.ndcCount(digit.toString(), kidsOnly) }.collectAsState(null)
     Box(Modifier.aspectRatio(1.66f).clip(RoundedCornerShape(6.dp)).background(color).clickable(onClick = onClick).padding(14.dp)) {
         Column {
             Text(name, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium)
@@ -362,31 +422,37 @@ fun CatalogStatus(catalog: Catalog) {
     }
 }
 
+/** 作品の一覧。各行は小さな表紙・作品名・文字遣い種別・著者。numbered なら左に通し番号を付ける。 */
 @Composable
-private fun WorkList(works: Flow<List<WorkItem>>) {
+private fun WorkList(works: Flow<List<WorkItem>>, numbered: Boolean = false) {
     val items by works.collectAsState(null)
     when {
         items == null -> {}
         items!!.isEmpty() -> Text("作品がありません", Modifier.padding(16.dp))
-        else -> LazyColumn { workItems(items!!) }
-    }
-}
-
-// ponytail: 作品詳細ができるまでは押しても何もしない
-private fun LazyListScope.workItems(works: List<WorkItem>) {
-    items(works, key = { it.id }) {
-        ListItem(
-            headlineContent = { Text(it.title) },
-            supportingContent = { Text(listOfNotNull(it.subtitle.ifEmpty { null }, it.authors).joinToString("\n")) },
-        )
-        HorizontalDivider()
+        else -> LazyColumn {
+            // ponytail: 作品詳細ができるまでは押しても何もしない
+            itemsIndexed(items!!, key = { _, it -> it.id }) { i, work ->
+                Row(Modifier.fillMaxWidth().padding(end = 16.dp, top = 8.dp, bottom = 8.dp, start = if (numbered) 0.dp else 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (numbered) {
+                        Text("${i + 1}", color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center, modifier = Modifier.width(56.dp))
+                    }
+                    BookCover(work, Modifier.width(64.dp), small = true)
+                    Column(Modifier.padding(start = 16.dp).weight(1f)) {
+                        Text(work.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        if (work.subtitle.isNotBlank()) Text(work.subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                        Text(work.kanaType, color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
+                        work.authors?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp)) }
+                    }
+                }
+            }
+        }
     }
 }
 
 /** 第 2 次区分の行。番号・名前・件数を並べ、作品のない区分は薄くして押せなくする。 */
 @Composable
-private fun NdcDivisionRow(code: String, name: String, dao: CatalogDao, onClick: () -> Unit) {
-    val count by remember(code) { dao.ndcCount(code) }.collectAsState(null)
+private fun NdcDivisionRow(code: String, name: String, dao: CatalogDao, kidsOnly: Boolean, onClick: () -> Unit) {
+    val count by remember(code, kidsOnly) { dao.ndcCount(code, kidsOnly) }.collectAsState(null)
     val empty = count == 0
     Row(
         Modifier.fillMaxWidth().clickable(enabled = count?.let { it > 0 } == true, onClick = onClick).padding(horizontal = 20.dp, vertical = 18.dp),
@@ -402,10 +468,4 @@ private fun NdcDivisionRow(code: String, name: String, dao: CatalogDao, onClick:
         count?.takeIf { it > 0 }?.let { Text("%,d件".format(it), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium) }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.outlineVariant)
     }
-}
-
-@Composable
-private fun NavItem(label: String, onClick: () -> Unit) {
-    ListItem(headlineContent = { Text(label) }, modifier = Modifier.clickable(onClick = onClick))
-    HorizontalDivider()
 }

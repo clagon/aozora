@@ -36,19 +36,40 @@ fun ndcTags(ndc: String): List<String> {
 }
 
 /**
- * 五十音の行。読みのソート用の値（平仮名・濁点なし）を文字コードの範囲で切る。
- * 読みが平仮名で始まらない少数の作品（記号・英字・片仮名など）も漏れないよう、
- * あ行は先頭から、わ行は末尾までを含める。
+ * 読み（ソート用の値。平仮名・濁点なし）の範囲。from 以上 to 未満を文字コード順で比べる。
+ * from が空のときは、平仮名で始まらない読み（記号・英字・片仮名など）を表す。
  */
-enum class KanaRow(val label: String, val from: String, val to: String) {
-    A("あ", "", "か"),
-    KA("か", "か", "さ"),
-    SA("さ", "さ", "た"),
-    TA("た", "た", "な"),
-    NA("な", "な", "は"),
-    HA("は", "は", "ま"),
-    MA("ま", "ま", "や"),
-    YA("や", "や", "ら"),
-    RA("ら", "ら", "わ"),
-    WA("わ", "わ", "￿"),
+data class YomiRange(val from: String, val to: String)
+
+private const val HIRAGANA_END = "ゟ" // 平仮名ブロックの末尾。これ以上は片仮名など
+private val OTHER_YOMI = YomiRange("", "")
+
+/** 作家別の縦タブに並べる五十音の行。 */
+enum class KanaRow(val label: String, val range: YomiRange) {
+    A("あ行", YomiRange("ぁ", "か")),
+    KA("か行", YomiRange("か", "さ")),
+    SA("さ行", YomiRange("さ", "た")),
+    TA("た行", YomiRange("た", "な")),
+    NA("な行", YomiRange("な", "は")),
+    HA("は行", YomiRange("は", "ま")),
+    MA("ま行", YomiRange("ま", "や")),
+    YA("や行", YomiRange("や", "ら")),
+    RA("ら行", YomiRange("ら", "わ")),
+    WA("わ行", YomiRange("わ", HIRAGANA_END)),
+    OTHER("その他", OTHER_YOMI),
+}
+
+private const val KANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん"
+
+/** 作品別の格子に 5 列で並べる文字。null は空きマス（や行・わ行の欠け）、「他」は平仮名以外。 */
+val KANA_GRID: List<String?> = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもや_ゆ_よらりるれろわ_を_ん他"
+    .map { if (it == '_') null else it.toString() }
+
+/** その文字で始まる読みの範囲。小書きの仮名などは直前の文字に含める（ソート用の読みにはほぼ出てこない）。 */
+fun kanaRange(kana: String): YomiRange {
+    val i = KANA.indexOf(kana)
+    if (i < 0) return OTHER_YOMI
+    val from = if (i == 0) "ぁ" else kana
+    val to = if (i == KANA.lastIndex) HIRAGANA_END else KANA[i + 1].toString()
+    return YomiRange(from, to)
 }

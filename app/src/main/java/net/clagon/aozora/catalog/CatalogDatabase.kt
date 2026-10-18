@@ -79,11 +79,24 @@ data class WorkItem(
     val subtitle: String,
     val firstAppearance: String,
     val ndc: String,
+    val kanaType: String,
     val authors: String?,
 )
 
+/** 作家一覧の 1 行。workCount は役割を問わず関わった公開作品の数。 */
+data class PersonItem(val id: Int, val lastName: String, val firstName: String, val workCount: Int) {
+    val name get() = "$lastName $firstName".trim()
+}
+
+// 読みの範囲の条件。:from が空なら平仮名で始まらない読み（YomiRange を参照）
+private const val WORK_IN_YOMI = "((:from != '' AND w.sortYomi >= :from AND w.sortYomi < :to) OR (:from = '' AND (w.sortYomi < 'ぁ' OR w.sortYomi >= 'ゟ')))"
+private const val PERSON_IN_YOMI = "((:from != '' AND p.lastNameSort >= :from AND p.lastNameSort < :to) OR (:from = '' AND (p.lastNameSort < 'ぁ' OR p.lastNameSort >= 'ゟ')))"
+
+// 分野の条件。児童書だけのときは K つきの分類だけを見る
+private const val IN_NDC = "((:kidsOnly = 0 AND ' ' || w.ndc LIKE '% ' || :code || '%') OR ' ' || w.ndc LIKE '% K' || :code || '%')"
+
 private const val WORK_ITEM = """
-    SELECT w.id, w.title, w.subtitle, w.firstAppearance, w.ndc,
+    SELECT w.id, w.title, w.subtitle, w.firstAppearance, w.ndc, w.kanaType,
         (SELECT GROUP_CONCAT(TRIM(p.lastName || ' ' || p.firstName), '、')
          FROM credits c JOIN persons p ON p.id = c.personId
          WHERE c.workId = w.id AND c.role = '著者') AS authors
@@ -97,22 +110,28 @@ abstract class CatalogDao {
     @Query("$WORK_ITEM ORDER BY w.publishedOn DESC, w.id DESC LIMIT :limit")
     abstract fun newWorks(limit: Int): Flow<List<WorkItem>>
 
-    /** code は NDC の上 2 桁（例: "91"）。児童書（K つき）も含める。ndc は "NDC 913" や "NDC 756 914" の形。 */
-    @Query("$WORK_ITEM WHERE ' ' || w.ndc LIKE '% ' || :code || '%' OR ' ' || w.ndc LIKE '% K' || :code || '%' ORDER BY w.sortYomi")
-    abstract fun worksByNdc(code: String): Flow<List<WorkItem>>
+    /**
+     * code は NDC の上 1〜3 桁（例: "9"、"91"）。ndc は "NDC 913" や "NDC 756 914" の形。
+     * 分野別では児童書（K つき）も含め、児童書では K つきだけを見る。
+     */
+    @Query("$WORK_ITEM WHERE $IN_NDC ORDER BY w.sortYomi")
+    abstract fun worksByNdc(code: String, kidsOnly: Boolean): Flow<List<WorkItem>>
 
-    /** worksByNdc と同じ条件で件数を数える。code は上 1 桁（第 1 次区分）でも上 2 桁（第 2 次区分）でもよい。 */
-    @Query("SELECT COUNT(*) FROM works WHERE ' ' || ndc LIKE '% ' || :code || '%' OR ' ' || ndc LIKE '% K' || :code || '%'")
-    abstract fun ndcCount(code: String): Flow<Int>
+    /** worksByNdc と同じ条件で件数を数える。 */
+    @Query("SELECT COUNT(*) FROM works w WHERE $IN_NDC")
+    abstract fun ndcCount(code: String, kidsOnly: Boolean): Flow<Int>
 
-    @Query("$WORK_ITEM WHERE w.sortYomi >= :from AND w.sortYomi < :to AND (:kidsOnly = 0 OR w.ndc LIKE '%K%') ORDER BY w.sortYomi")
-    abstract fun worksByYomi(from: String, to: String, kidsOnly: Boolean): Flow<List<WorkItem>>
+    @Query("$WORK_ITEM WHERE $WORK_IN_YOMI ORDER BY w.sortYomi")
+    abstract fun worksByYomi(from: String, to: String): Flow<List<WorkItem>>
 
     @Query("$WORK_ITEM WHERE w.id IN (SELECT workId FROM credits WHERE personId = :personId) ORDER BY w.sortYomi")
     abstract fun worksByPerson(personId: Int): Flow<List<WorkItem>>
 
-    @Query("SELECT * FROM persons WHERE lastNameSort >= :from AND lastNameSort < :to ORDER BY lastNameSort, firstNameSort")
-    abstract fun personsByYomi(from: String, to: String): Flow<List<Person>>
+    @Query("""
+        SELECT p.id, p.lastName, p.firstName,
+            (SELECT COUNT(DISTINCT c.workId) FROM credits c WHERE c.personId = p.id) AS workCount
+        FROM persons p WHERE $PERSON_IN_YOMI ORDER BY p.lastNameSort, p.firstNameSort""")
+    abstract fun personsByYomi(from: String, to: String): Flow<List<PersonItem>>
 
     /** カタログは丸ごと取り直すので、差分更新はせず全件を入れ替える。 */
     @Transaction

@@ -52,4 +52,15 @@ class CatalogTest {
         assertEquals(emptyList<String>(), ndcTags(""))
         assertEquals(emptyList<String>(), ndcTags("NDC "))
     }
+
+    @Test
+    fun kanaRangeCoversEachKanaUpToTheNextOne() {
+        assertEquals(YomiRange("ぁ", "い"), kanaRange("あ"))
+        assertEquals(YomiRange("か", "き"), kanaRange("か"))
+        assertEquals(YomiRange("こ", "さ"), kanaRange("こ"))
+        assertEquals(YomiRange("ん", "ゟ"), kanaRange("ん"))
+        assertEquals(YomiRange("", ""), kanaRange("他"))
+        // 格子の文字は空きマスを除いて 46 文字と「他」
+        assertEquals(47, KANA_GRID.filterNotNull().size)
+    }
 }
