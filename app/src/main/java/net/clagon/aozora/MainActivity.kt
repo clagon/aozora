@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
         )
         setContent {
-            // ponytail: 元アプリと同じく端末のダークモードには従わない。その他画面のカラーモードを作るときに切り替えられるようにする
+            // ponytail: カラーモード（システム・ライト・ダーク。既定はシステム）の設定を作るまでは、ライトで固定する
             MaterialTheme(colorScheme = lightColorScheme(primary = Accent, background = Color.White, surface = Color.White, surfaceContainerHigh = Color(0xFFF0F2F4))) {
                 App()
             }
@@ -71,7 +71,7 @@ private val Accent = Color(0xFF4A86E8)
 private enum class Tab(val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
     Home("ホーム", Icons.Outlined.Home, Icons.Filled.Home),
     Bookshelf("本棚", Icons.Outlined.ViewAgenda, Icons.Filled.ViewAgenda),
-    Library("文庫", Icons.AutoMirrored.Outlined.MenuBook, Icons.AutoMirrored.Filled.MenuBook),
+    Library("探す", Icons.AutoMirrored.Outlined.MenuBook, Icons.AutoMirrored.Filled.MenuBook),
     Other("その他", Icons.Filled.MoreHoriz, Icons.Filled.MoreHoriz),
 }
 
