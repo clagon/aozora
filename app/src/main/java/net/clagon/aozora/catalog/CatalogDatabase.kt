@@ -72,10 +72,36 @@ data class Person(
 @Entity(tableName = "credits", primaryKeys = ["workId", "personId", "role"], indices = [Index("personId")])
 data class Credit(val workId: Int, val personId: Int, val role: String)
 
+/** 一覧の 1 行。authors は役割が著者の作家を「、」でつないだもの。 */
+data class WorkItem(val id: Int, val title: String, val subtitle: String, val authors: String?)
+
+private const val WORK_ITEM = """
+    SELECT w.id, w.title, w.subtitle,
+        (SELECT GROUP_CONCAT(TRIM(p.lastName || ' ' || p.firstName), '、')
+         FROM credits c JOIN persons p ON p.id = c.personId
+         WHERE c.workId = w.id AND c.role = '著者') AS authors
+    FROM works w"""
+
 @Dao
 abstract class CatalogDao {
     @Query("SELECT COUNT(*) FROM works")
     abstract fun workCount(): Flow<Int>
+
+    @Query("$WORK_ITEM ORDER BY w.publishedOn DESC, w.id DESC LIMIT :limit")
+    abstract fun newWorks(limit: Int): Flow<List<WorkItem>>
+
+    /** code は NDC の上 2 桁（例: "91"）。児童書（K つき）も含める。ndc は "NDC 913" や "NDC 756 914" の形。 */
+    @Query("$WORK_ITEM WHERE ' ' || w.ndc LIKE '% ' || :code || '%' OR ' ' || w.ndc LIKE '% K' || :code || '%' ORDER BY w.sortYomi")
+    abstract fun worksByNdc(code: String): Flow<List<WorkItem>>
+
+    @Query("$WORK_ITEM WHERE w.sortYomi >= :from AND w.sortYomi < :to AND (:kidsOnly = 0 OR w.ndc LIKE '%K%') ORDER BY w.sortYomi")
+    abstract fun worksByYomi(from: String, to: String, kidsOnly: Boolean): Flow<List<WorkItem>>
+
+    @Query("$WORK_ITEM WHERE w.id IN (SELECT workId FROM credits WHERE personId = :personId) ORDER BY w.sortYomi")
+    abstract fun worksByPerson(personId: Int): Flow<List<WorkItem>>
+
+    @Query("SELECT * FROM persons WHERE lastNameSort >= :from AND lastNameSort < :to ORDER BY lastNameSort, firstNameSort")
+    abstract fun personsByYomi(from: String, to: String): Flow<List<Person>>
 
     /** カタログは丸ごと取り直すので、差分更新はせず全件を入れ替える。 */
     @Transaction
