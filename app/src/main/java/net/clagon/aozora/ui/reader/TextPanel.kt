@@ -34,7 +34,6 @@ import net.clagon.aozora.reader.Spacing
  * 文字パネル。文字サイズ・余白・行間・ページめくりを変えると、すぐ本文に反映する（onChange）。
  * 変わる様子が見えるよう、後ろの本文は暗くしない。
  */
-// ponytail: フォントの切り替えは、同梱するフォントを決めてから足す
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TextPanel(settings: ReaderSettings, onChange: (ReaderSettings) -> Unit, onDismiss: () -> Unit) {
