@@ -35,6 +35,32 @@ fun ndcTags(ndc: String): List<String> {
     return if (codes.size == 1) listOf(NDC_CLASSES[codes[0][0]].name) + tags else tags
 }
 
+/** 分野ごとの作品数。[CatalogDao.worksByNdc] で出る作品の数と同じになる。 */
+class NdcCounts(private val counts: Map<String, Int>) {
+    /** code は NDC の上 1〜3 桁。作品のない分野は 0。 */
+    fun of(code: String, kidsOnly: Boolean) = counts[if (kidsOnly) "K$code" else code] ?: 0
+}
+
+/**
+ * 全作品の分類番号（[Work.ndc]）から、すべての分野の作品数を一度に数える。
+ * 1 つの作品が同じ分野の分類を複数持っていても 1 件と数える。児童書（K つき）は分野別にも数える。
+ */
+fun countNdc(ndcs: List<String>): NdcCounts {
+    val counts = HashMap<String, Int>()
+    for (ndc in ndcs) {
+        val keys = HashSet<String>()
+        for (token in ndc.removePrefix("NDC").split(' ')) {
+            val code = token.removePrefix("K")
+            for (n in 1..code.length) {
+                keys += code.take(n)
+                if (token.startsWith("K")) keys += "K" + code.take(n)
+            }
+        }
+        keys.forEach { counts.merge(it, 1, Int::plus) }
+    }
+    return NdcCounts(counts)
+}
+
 /**
  * 読み（ソート用の値。平仮名・濁点なし）の範囲。from 以上 to 未満を文字コード順で比べる。
  * from が空のときは、平仮名で始まらない読み（記号・英字・片仮名など）を表す。

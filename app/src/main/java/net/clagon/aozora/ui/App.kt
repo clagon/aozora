@@ -86,7 +86,7 @@ fun App() {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             saveableState.SaveableStateProvider(if (top == null) "root" else "${screens.size}:$top") {
                 if (top != null) {
-                    StackedScreen(top, catalog.dao, push) { back() }
+                    StackedScreen(top, catalog, push) { back() }
                 } else {
                     TabRoot(tab, catalog, push) { tab = it }
                 }
@@ -123,7 +123,7 @@ private fun TabRoot(tab: Tab, catalog: Catalog, push: (Screen) -> Unit, select: 
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (tab) {
                 Tab.Home -> HomeScreen(catalog, push)
-                Tab.Search -> SearchScreen(catalog.dao, push)
+                Tab.Search -> SearchScreen(catalog, push)
                 // ponytail: 本棚とその他の中身は未実装。それまではその他にカタログの状態を出しておく
                 Tab.Other -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CatalogStatus(catalog) }
                 Tab.Bookshelf -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tab.label) }

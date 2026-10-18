@@ -63,4 +63,15 @@ class CatalogTest {
         // 格子の文字は空きマスを除いて 46 文字と「他」
         assertEquals(47, KANA_GRID.filterNotNull().size)
     }
+
+    @Test
+    fun countNdcCountsEachWorkOncePerDivision() {
+        val counts = countNdc(listOf("NDC 913", "NDC K913", "NDC 913 914", "NDC 756 K914", ""))
+        assertEquals(4, counts.of("9", kidsOnly = false))
+        assertEquals(3, counts.of("913", kidsOnly = false))
+        assertEquals(2, counts.of("9", kidsOnly = true))
+        assertEquals(1, counts.of("913", kidsOnly = true))
+        assertEquals(1, counts.of("7", kidsOnly = false))
+        assertEquals(0, counts.of("7", kidsOnly = true))
+    }
 }

@@ -20,7 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import net.clagon.aozora.catalog.CatalogDao
+import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.NDC_CLASSES
 import net.clagon.aozora.catalog.kanaRange
 import net.clagon.aozora.ui.components.WorkList
@@ -55,7 +55,8 @@ sealed interface Screen {
 
 /** 積んだ画面の共通の枠。上部に戻るボタンと見出しを置き、中身を画面の種類で切り替える。 */
 @Composable
-fun StackedScreen(screen: Screen, dao: CatalogDao, push: (Screen) -> Unit, back: () -> Unit) {
+fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back: () -> Unit) {
+    val dao = catalog.dao
     Column(Modifier.fillMaxSize().systemBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.Center) {
             IconButton(onClick = back, modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp)) {
@@ -65,7 +66,7 @@ fun StackedScreen(screen: Screen, dao: CatalogDao, push: (Screen) -> Unit, back:
         }
         when (screen) {
             Screen.NewWorks -> WorkList(remember { dao.newWorks(Int.MAX_VALUE) })
-            is Screen.Ndc -> NdcDivisionList(screen, dao, push)
+            is Screen.Ndc -> NdcDivisionList(screen, catalog, push)
             is Screen.NdcWorks -> WorkList(remember(screen) { dao.worksByNdc(screen.code, screen.kidsOnly) })
             is Screen.KanaWorks -> WorkList(remember(screen) { kanaRange(screen.kana).let { dao.worksByYomi(it.from, it.to) } })
             is Screen.PersonWorks -> WorkList(remember(screen) { dao.worksByPerson(screen.personId) })

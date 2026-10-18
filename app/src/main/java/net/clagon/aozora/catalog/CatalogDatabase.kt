@@ -134,9 +134,9 @@ abstract class CatalogDao {
     @Query("$WORK_ITEM WHERE $IN_NDC ORDER BY w.sortYomi")
     abstract fun worksByNdc(code: String, kidsOnly: Boolean): Flow<List<WorkItem>>
 
-    /** worksByNdc と同じ条件で件数を数える。 */
-    @Query("SELECT COUNT(*) FROM works w WHERE $IN_NDC")
-    abstract fun ndcCount(code: String, kidsOnly: Boolean): Flow<Int>
+    /** 全作品の分類番号。分野ごとの件数は [countNdc] でまとめて数える。 */
+    @Query("SELECT ndc FROM works")
+    abstract fun allNdc(): Flow<List<String>>
 
     /** 作品別で選んだ文字の範囲（[kanaRange]）に読みが入る作品。from が空なら平仮名で始まらない作品。 */
     @Query("$WORK_ITEM WHERE $WORK_IN_YOMI ORDER BY w.sortYomi")
