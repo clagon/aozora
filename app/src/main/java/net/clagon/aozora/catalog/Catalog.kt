@@ -8,9 +8,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -37,6 +41,11 @@ class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
     val state = _state.asStateFlow()
     /** DB を読めないときは件数を出さない（読めない理由は update() 側で Failed として見せる）。 */
     val workCount = dao.workCount().catch {}
+    /**
+     * 分野ごとの件数。起動時から数え始めておき、探すタブを開いた時点でそろっているようにする
+     * （数え終わる前のカードを出すと、作品のない分野が押せる見た目で一瞬出てしまう）。数え終わるまでは null。
+     */
+    val ndcCounts = dao.allNdc().map(::countNdc).flowOn(Dispatchers.Default).catch {}.stateIn(scope, SharingStarted.Eagerly, null)
 
     /** 起動時に AozoraApp から呼ぶ。カタログが空のときだけ取り込む（2 回目以降の起動では何もしない）。 */
     fun updateIfEmpty() = update(onlyIfEmpty = true)
