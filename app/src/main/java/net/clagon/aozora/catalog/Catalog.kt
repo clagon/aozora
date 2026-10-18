@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,19 +29,20 @@ sealed interface CatalogState {
 class Catalog(private val dao: CatalogDao, private val scope: CoroutineScope) {
     private val _state = MutableStateFlow<CatalogState>(CatalogState.Ready)
     val state = _state.asStateFlow()
-    val workCount = dao.workCount()
+    /** DB を読めないときは件数を出さない（読めない理由は update() 側で Failed として見せる）。 */
+    val workCount = dao.workCount().catch {}
 
-    fun updateIfEmpty() {
-        scope.launch { if (dao.workCount().first() == 0) update() }
-    }
+    fun updateIfEmpty() = update(onlyIfEmpty = true)
 
-    /** メインスレッドから呼ぶ。取り込み中なら何もしない。 */
-    fun update() {
+    /** メインスレッドから呼ぶ。取り込み中なら何もしない。DB の読み書きはすべて下の try の中で行う。 */
+    fun update(onlyIfEmpty: Boolean = false) {
         if (_state.value == CatalogState.Updating) return
         _state.value = CatalogState.Updating
         scope.launch {
             _state.value = try {
-                dao.replaceAll(withContext(Dispatchers.IO) { download() })
+                if (!onlyIfEmpty || dao.workCount().first() == 0) {
+                    dao.replaceAll(withContext(Dispatchers.IO) { download() })
+                }
                 CatalogState.Ready
             } catch (e: CancellationException) {
                 throw e
