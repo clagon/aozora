@@ -23,6 +23,11 @@
         go: function (page) {
             window.scrollTo(0, page * window.innerHeight);
         },
+        // 文字パネルの設定（CSS の変数）を入れ替え、ページを数え直す
+        style: function (variables) {
+            document.getElementById('reader-vars').textContent = variables;
+            layout();
+        },
     };
 
     document.addEventListener('DOMContentLoaded', verticalIndents);
