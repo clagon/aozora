@@ -79,6 +79,7 @@ fun PersonBrowser(dao: CatalogDao, push: (Screen) -> Unit) {
     }
 }
 
+/** 作家の行（名前・作品数）。押すとその作家の作品一覧を開く。 */
 private fun LazyListScope.personItems(persons: List<PersonItem>, push: (Screen) -> Unit) {
     items(persons, key = { it.id }) {
         Row(

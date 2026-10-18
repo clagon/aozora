@@ -33,11 +33,13 @@ private val COVER_COLORS = listOf(
     Color(0xFF8C7F74) to Color(0xFFB5A99E),
     Color(0xFF4F86C6) to Color(0xFF8FB4E0),
 )
+/** 和紙風の地の色。 */
 private val PAPER = Color(0xFFEBE6DC)
 
 // 一覧の小さな表紙（幅 64dp）の文字。表紙の幅に作品名が 4〜5 文字収まる大きさにしている
 private val SMALL_COVER_TITLE = TextStyle(fontSize = 9.5.sp, lineHeight = 13.sp)
 private val SMALL_COVER_AUTHOR = TextStyle(fontSize = 8.5.sp, lineHeight = 11.sp)
+/** 地に散らす繊維の色。作品 ID を種にした乱数で置くので、同じ作品はいつも同じ模様になる。 */
 private val PAPER_FLECK = Color(0x40A08C70)
 
 /** 和紙風の表紙。上に作品名、下の帯に著者名を置き、細い線を 2 本ずつ添える。 */

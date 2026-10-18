@@ -28,8 +28,10 @@ import net.clagon.aozora.ui.search.NdcDivisionList
 
 /** タブの上に積む画面。戻る操作で 1 つずつ外す。 */
 sealed interface Screen {
+    /** 上部の見出しに出す文字。 */
     val title: String
 
+    /** ホームの「もっと見る」で開く、新着作品の全件。 */
     data object NewWorks : Screen {
         override val title = "新着作品"
     }
@@ -39,6 +41,7 @@ sealed interface Screen {
         override val title get() = NDC_CLASSES[digit].name
     }
 
+    /** 第 2 次区分（code は 2 桁）に属する作品の一覧。 */
     data class NdcWorks(val code: String, override val title: String, val kidsOnly: Boolean) : Screen
 
     /** 作品別で選んだ 1 文字で始まる作品の一覧。 */

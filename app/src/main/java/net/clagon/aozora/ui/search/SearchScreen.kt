@@ -18,8 +18,10 @@ import androidx.compose.ui.unit.dp
 import net.clagon.aozora.catalog.CatalogDao
 import net.clagon.aozora.ui.Screen
 
+/** 探すタブの上部に並べる 4 つの探し方。並びは [SearchScreen] の分岐と対応する。 */
 private val SEARCH_TABS = listOf("分野別", "作家別", "作品別", "児童書")
 
+/** 探すタブ。上部のタブで分野別・作家別・作品別・児童書を切り替える。 */
 @Composable
 fun SearchScreen(dao: CatalogDao, push: (Screen) -> Unit) {
     var selected by rememberSaveable { mutableIntStateOf(0) }

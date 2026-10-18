@@ -42,6 +42,7 @@ fun ndcTags(ndc: String): List<String> {
 data class YomiRange(val from: String, val to: String)
 
 private const val HIRAGANA_END = "ゟ" // 平仮名ブロックの末尾。これ以上は片仮名など
+/** 平仮名で始まらない読み（作家別の「その他」、作品別の「他」）を表す範囲。 */
 private val OTHER_YOMI = YomiRange("", "")
 
 /** 作家別の縦タブに並べる五十音の行。 */
@@ -59,6 +60,7 @@ enum class KanaRow(val label: String, val range: YomiRange) {
     OTHER("その他", OTHER_YOMI),
 }
 
+/** 作品別で選べる 46 文字を、文字コードの順に並べたもの。[kanaRange] で次の文字を上限にするのに使う。 */
 private const val KANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん"
 
 /** 作品別の格子に 5 列で並べる文字。null は空きマス（や行・わ行の欠け）、「他」は平仮名以外。 */

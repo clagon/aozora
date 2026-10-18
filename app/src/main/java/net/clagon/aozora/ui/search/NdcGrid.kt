@@ -69,6 +69,7 @@ fun NdcGrid(dao: CatalogDao, kidsOnly: Boolean, push: (Screen) -> Unit) {
     }
 }
 
+/** 第 1 次区分のカード。区分名・件数と、区分を表す薄いアイコンを出す。 */
 @Composable
 private fun NdcCard(digit: Int, name: String, dao: CatalogDao, kidsOnly: Boolean, onClick: () -> Unit) {
     val (color, icon) = NDC_CARD_STYLES[digit]

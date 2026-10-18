@@ -45,6 +45,7 @@ import net.clagon.aozora.ui.components.CatalogStatus
 // 1 件目を表紙と詳細で大きく出し、続く 3 件を表紙だけで並べる
 private const val HOME_NEW_WORKS = 4
 
+/** ホームタブ。検索の入口と新着作品を出す。 */
 @Composable
 fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
     val state by catalog.state.collectAsState()
@@ -71,6 +72,7 @@ private fun SearchBarPlaceholder() {
     }
 }
 
+/** 区画の見出しと、右端の「もっと見る」。 */
 @Composable
 private fun SectionHeader(title: String, onMore: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -108,8 +110,10 @@ private fun CoverShowcase(works: List<WorkItem>) {
     }
 }
 
+/** 分野タグの文字色と背景色。1 つ目を緑、2 つ目を橙にし、それ以降は繰り返す。 */
 private val TAG_COLORS = listOf(Color(0xFF3FA36B) to Color(0xFFE6F4EC), Color(0xFFE8794A) to Color(0xFFFDEEE6))
 
+/** 作品の分類（[ndcTags]）をタグで並べる。幅が足りなければ折り返す。 */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun NdcTagRow(ndc: String) {

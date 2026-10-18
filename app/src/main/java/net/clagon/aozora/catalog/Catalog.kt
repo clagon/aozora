@@ -14,11 +14,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** 青空文庫公式の全作品・全作家の一覧（拡張版・UTF-8）。zip の中に CSV が 1 つ入っている。 */
 private const val CATALOG_URL = "https://www.aozora.gr.jp/index_pages/list_person_all_extended_utf8.zip"
 
+/** カタログの取り込みの状態。画面はこれを見て、取り込み中の表示や失敗の理由を出す。 */
 sealed interface CatalogState {
+    /** 取り込み中ではない。カタログが空のこともある（件数は [Catalog.workCount] で見る）。 */
     data object Ready : CatalogState
+    /** ダウンロードまたは DB への書き込みの途中。 */
     data object Updating : CatalogState
+    /** 直前の取り込みが失敗した。message は利用者にそのまま見せる理由。前のカタログは残っている。 */
     data class Failed(val message: String) : CatalogState
 }
 
@@ -28,10 +33,12 @@ sealed interface CatalogState {
  */
 class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
     private val _state = MutableStateFlow<CatalogState>(CatalogState.Ready)
+    /** 取り込みの状態。CatalogStatus とホームが購読する。 */
     val state = _state.asStateFlow()
     /** DB を読めないときは件数を出さない（読めない理由は update() 側で Failed として見せる）。 */
     val workCount = dao.workCount().catch {}
 
+    /** 起動時に AozoraApp から呼ぶ。カタログが空のときだけ取り込む（2 回目以降の起動では何もしない）。 */
     fun updateIfEmpty() = update(onlyIfEmpty = true)
 
     /** メインスレッドから呼ぶ。取り込み中なら何もしない。DB の読み書きはすべて下の try の中で行う。 */
@@ -69,6 +76,7 @@ class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
     }
 }
 
+/** CSV から読み取ったカタログ全体。[CatalogDao.replaceAll] でそのまま DB に入れる。 */
 class ParsedCatalog(val works: List<Work>, val persons: List<Person>, val credits: List<Credit>)
 
 /** 公式 CSV（1 行が作品と作家の組）を、作品・作家・その組に分ける。列は見出し名で引く。 */

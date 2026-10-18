@@ -47,6 +47,7 @@ import net.clagon.aozora.ui.components.CatalogStatus
 import net.clagon.aozora.ui.home.HomeScreen
 import net.clagon.aozora.ui.search.SearchScreen
 
+/** 画面を開く・戻るときのスライドの時間。 */
 private const val SLIDE_MILLIS = 300
 
 /** 下部タブ。 */
@@ -96,6 +97,7 @@ fun App() {
     }
 }
 
+/** 下部タブと、選んだタブの画面。積んだ画面がないときだけ表示される。 */
 @Composable
 private fun TabRoot(tab: Tab, catalog: Catalog, push: (Screen) -> Unit, select: (Tab) -> Unit) {
     Scaffold(
