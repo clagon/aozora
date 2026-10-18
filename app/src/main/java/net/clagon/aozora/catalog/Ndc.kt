@@ -24,7 +24,7 @@ val NDC_CLASSES = listOf(
 private val LITERARY_FORMS = listOf(null, "詩歌", "戯曲", "小説・物語", "評論・エッセイ・随筆", "日記・書簡・紀行", "記録・手記・ルポルタージュ", "箴言・アフォリズム・寸言", "作品集", null)
 
 /**
- * 作品カードに出すタグ。元アプリに合わせ、分類ごとに文学なら形式名、それ以外は第 2 次区分の名前を出す。
+ * 作品カードに出すタグ。分類ごとに文学なら形式名、それ以外は第 2 次区分の名前を出す。
  * 分類が 1 つだけのときは、先頭に第 1 次区分の名前（例: 文学）を足す。
  */
 fun ndcTags(ndc: String): List<String> {
@@ -42,6 +42,7 @@ fun ndcTags(ndc: String): List<String> {
 data class YomiRange(val from: String, val to: String)
 
 private const val HIRAGANA_END = "ゟ" // 平仮名ブロックの末尾。これ以上は片仮名など
+/** 平仮名で始まらない読み（作家別の「その他」、作品別の「他」）を表す範囲。 */
 private val OTHER_YOMI = YomiRange("", "")
 
 /** 作家別の縦タブに並べる五十音の行。 */
@@ -59,6 +60,7 @@ enum class KanaRow(val label: String, val range: YomiRange) {
     OTHER("その他", OTHER_YOMI),
 }
 
+/** 作品別で選べる 46 文字を、文字コードの順に並べたもの。[kanaRange] で次の文字を上限にするのに使う。 */
 private const val KANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん"
 
 /** 作品別の格子に 5 列で並べる文字。null は空きマス（や行・わ行の欠け）、「他」は平仮名以外。 */

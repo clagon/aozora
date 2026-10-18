@@ -1,0 +1,74 @@
+package net.clagon.aozora.ui
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import net.clagon.aozora.catalog.CatalogDao
+import net.clagon.aozora.catalog.NDC_CLASSES
+import net.clagon.aozora.catalog.kanaRange
+import net.clagon.aozora.ui.components.WorkList
+import net.clagon.aozora.ui.search.NdcDivisionList
+
+/** タブの上に積む画面。戻る操作で 1 つずつ外す。 */
+sealed interface Screen {
+    /** 上部の見出しに出す文字。 */
+    val title: String
+
+    /** ホームの「もっと見る」で開く、新着作品の全件。 */
+    data object NewWorks : Screen {
+        override val title = "新着作品"
+    }
+
+    /** 分野の第 2 次区分の一覧。kidsOnly なら児童書だけを数える。 */
+    data class Ndc(val digit: Int, val kidsOnly: Boolean) : Screen {
+        override val title get() = NDC_CLASSES[digit].name
+    }
+
+    /** 第 2 次区分（code は 2 桁）に属する作品の一覧。 */
+    data class NdcWorks(val code: String, override val title: String, val kidsOnly: Boolean) : Screen
+
+    /** 作品別で選んだ 1 文字で始まる作品の一覧。 */
+    data class KanaWorks(val kana: String) : Screen {
+        override val title get() = "作品一覧：$kana"
+    }
+
+    // ponytail: 作家詳細ができるまでの仮の画面。作品を役割ごとに分けずに並べる
+    data class PersonWorks(val personId: Int, override val title: String) : Screen
+}
+
+/** 積んだ画面の共通の枠。上部に戻るボタンと見出しを置き、中身を画面の種類で切り替える。 */
+@Composable
+fun StackedScreen(screen: Screen, dao: CatalogDao, push: (Screen) -> Unit, back: () -> Unit) {
+    Column(Modifier.fillMaxSize().systemBarsPadding()) {
+        Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.Center) {
+            IconButton(onClick = back, modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBackIos, contentDescription = "戻る", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(screen.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 56.dp))
+        }
+        when (screen) {
+            Screen.NewWorks -> WorkList(remember { dao.newWorks(Int.MAX_VALUE) })
+            is Screen.Ndc -> NdcDivisionList(screen, dao, push)
+            is Screen.NdcWorks -> WorkList(remember(screen) { dao.worksByNdc(screen.code, screen.kidsOnly) })
+            is Screen.KanaWorks -> WorkList(remember(screen) { kanaRange(screen.kana).let { dao.worksByYomi(it.from, it.to) } })
+            is Screen.PersonWorks -> WorkList(remember(screen) { dao.worksByPerson(screen.personId) })
+        }
+    }
+}
