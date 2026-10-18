@@ -11,10 +11,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +38,6 @@ import net.clagon.aozora.ui.components.NdcTagRow
  * 作品詳細。表紙・作品名・作家・分野タグの下に、作品データ・底本データ・工作員データを並べる。
  * 作家名を押すとその作家の作品一覧を開く。
  */
-// ponytail: 「本棚に追加」「今すぐ読む」は、本棚とリーダーを作るときに下部に足す
 @Composable
 fun WorkDetailScreen(workId: Int, catalog: Catalog, push: (Screen) -> Unit) {
     val work by remember(workId) { catalog.dao.work(workId) }.collectAsState(null)
@@ -46,46 +48,65 @@ fun WorkDetailScreen(workId: Int, catalog: Catalog, push: (Screen) -> Unit) {
     val w = work ?: return
     val i = item ?: return
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Row(
-            Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            BookCover(i, Modifier.width(96.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(w.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (w.subtitle.isNotBlank()) {
-                    Text(
-                        w.subtitle,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
+    Column(Modifier.fillMaxSize()) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Row(
+                Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                BookCover(i, Modifier.width(96.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(w.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    if (w.subtitle.isNotBlank()) {
+                        Text(
+                            w.subtitle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    credits.forEach { person ->
+                        // 著者以外（翻訳者など）は役割を添えて、著者と見分けられるようにする
+                        val label = if (person.role == "著者") person.name else "${person.name}（${person.role}）"
+                        Text(
+                            label,
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.clickable { push(Screen.PersonDetail(person.personId, person.name)) },
+                        )
+                    }
+                    NdcTagRow(w.ndc)
                 }
-                credits.forEach { person ->
-                    // 著者以外（翻訳者など）は役割を添えて、著者と見分けられるようにする
-                    val label = if (person.role == "著者") person.name else "${person.name}（${person.role}）"
-                    Text(
-                        label,
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.clickable { push(Screen.PersonDetail(person.personId, person.name)) },
-                    )
-                }
-                NdcTagRow(w.ndc)
             }
+            Section("作品データ") {
+                Field("作品名読み", w.titleYomi)
+                Field("分類", w.ndc)
+                Field("文字遣い種別", w.kanaType)
+                Field("作品について", about.orEmpty())
+            }
+            listOfNotNull(w.source1, w.source2).forEach { Section("底本データ") { SourceFields(it) } }
+            Section("工作員データ") {
+                Field("入力", w.inputter)
+                Field("校正", w.proofreader)
+            }
+            Spacer(Modifier.height(24.dp))
         }
-        Section("作品データ") {
-            Field("作品名読み", w.titleYomi)
-            Field("分類", w.ndc)
-            Field("文字遣い種別", w.kanaType)
-            Field("作品について", about.orEmpty())
-        }
-        listOfNotNull(w.source1, w.source2).forEach { Section("底本データ") { SourceFields(it) } }
-        Section("工作員データ") {
-            Field("入力", w.inputter)
-            Field("校正", w.proofreader)
-        }
-        Spacer(Modifier.height(24.dp))
+        BottomBar { push(Screen.Reader(w.id)) }
+    }
+}
+
+/** 下部のボタン。 */
+// ponytail: 「本棚に追加」は、本棚を作るときに左に足す
+@Composable
+private fun BottomBar(read: () -> Unit) {
+    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
+    Button(
+        onClick = read,
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(
+            horizontal = 16.dp,
+            vertical = 10.dp,
+        ).height(52.dp),
+    ) {
+        Text("今すぐ読む", style = MaterialTheme.typography.titleMedium)
     }
 }
 

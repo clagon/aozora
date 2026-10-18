@@ -1,0 +1,77 @@
+/*
+ * 本文を縦書きにし、1 画面ずつの段に分ける。縦書きでは段は上から下へ並ぶので、
+ * 1 段の高さを画面の高さにそろえ、縦にスクロールして 1 ページずつ見せる（reader.js）。
+ * --margin-x は左右（行の並ぶ方向）、--margin-y は上下（文字の並ぶ方向）の余白。
+ * --page-width と --page-height は画面の大きさで、reader.js が入れる（WebView の大きさが決まる前は vh が 0 になるため）。
+ */
+:root {
+    --margin-x: 24px;
+    --margin-y: 40px;
+    --page-width: 100vw;
+    --page-height: 100vh;
+}
+
+html {
+    writing-mode: vertical-rl;
+    overflow: hidden;
+}
+
+body {
+    box-sizing: border-box;
+    width: var(--page-width);
+    height: var(--page-height);
+    margin: 0;
+    padding: var(--margin-y) var(--margin-x);
+    column-width: calc(var(--page-height) - 2 * var(--margin-y));
+    column-gap: calc(2 * var(--margin-y));
+    column-fill: auto;
+    font-family: serif;
+    font-size: 18px;
+    line-height: 1.8;
+    color: #222;
+    background: #fff;
+    -webkit-text-size-adjust: none;
+}
+
+/* 見出しは本文と同じ大きさのまま太字にする */
+h1, h2, h3, h4, h5 {
+    font-size: 1em;
+    margin: 0;
+}
+
+.metadata h1 {
+    font-size: 1.4em;
+}
+
+rt {
+    font-size: 0.5em;
+}
+
+/* 傍点 */
+.sesame_dot {
+    text-emphasis-style: sesame;
+}
+
+.white_sesame_dot {
+    text-emphasis-style: open sesame;
+}
+
+.black_circle {
+    text-emphasis-style: filled circle;
+}
+
+.white_circle {
+    text-emphasis-style: open circle;
+}
+
+/* 外字の画像は 1 文字分にする */
+img.gaiji {
+    width: 1em;
+    height: 1em;
+}
+
+/* 挿絵は 1 ページに収める */
+img:not(.gaiji) {
+    max-width: calc(var(--page-width) - 2 * var(--margin-x));
+    max-height: calc(var(--page-height) - 2 * var(--margin-y));
+}

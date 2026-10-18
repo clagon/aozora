@@ -26,6 +26,7 @@ import net.clagon.aozora.catalog.WorkItem
 import net.clagon.aozora.catalog.kanaRange
 import net.clagon.aozora.ui.components.WorkList
 import net.clagon.aozora.ui.person.PersonDetailScreen
+import net.clagon.aozora.ui.reader.ReaderScreen
 import net.clagon.aozora.ui.search.NdcDivisionList
 import net.clagon.aozora.ui.work.WorkDetailScreen
 
@@ -57,6 +58,11 @@ sealed interface Screen {
         override val title = ""
     }
 
+    /** 本文を読むリーダー。見出しや戻るボタンの枠を持たず、画面全体を使う。 */
+    data class Reader(val workId: Int) : Screen {
+        override val title = ""
+    }
+
     /** 作家詳細。見出しは作家名。 */
     data class PersonDetail(val personId: Int, override val title: String) : Screen
 }
@@ -64,6 +70,7 @@ sealed interface Screen {
 /** 積んだ画面の共通の枠。上部に戻るボタンと見出しを置き、中身を画面の種類で切り替える。 */
 @Composable
 fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back: () -> Unit) {
+    if (screen is Screen.Reader) return ReaderScreen(screen.workId, catalog, back)
     val dao = catalog.dao
     Column(Modifier.fillMaxSize().systemBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.Center) {
@@ -101,6 +108,8 @@ fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back
             is Screen.PersonDetail -> PersonDetailScreen(screen.personId, catalog, open)
 
             is Screen.WorkDetail -> WorkDetailScreen(screen.workId, catalog, push)
+
+            is Screen.Reader -> {}
         }
     }
 }
