@@ -94,7 +94,7 @@ private fun LazyListScope.personItems(persons: List<PersonItem>, push: (Screen) 
     items(persons, key = { it.id }) {
         Row(
             Modifier.fillMaxWidth().clickable {
-                push(Screen.PersonWorks(it.id, it.name))
+                push(Screen.PersonDetail(it.id, it.name))
             }.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

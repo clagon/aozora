@@ -83,8 +83,13 @@ class CatalogTest {
 <tr><td class="header">文字遣い種別：</td><td>新字新仮名</td></tr>"""
         assertEquals(
             """明治38（1905）年1月、「ホトトギス」に発表。<br><a href="http://ja.wikipedia.org/">「吾輩は猫である」</a>""",
-            aboutHtml(card),
+            aboutHtml(card, "作品について"),
         )
-        assertNull(aboutHtml("""<tr><td class="header">文字遣い種別：</td><td>新字新仮名</td></tr>"""))
+        assertNull(aboutHtml("""<tr><td class="header">文字遣い種別：</td><td>新字新仮名</td></tr>""", "作品について"))
+        // 作家ページも同じ形の欄を持つ
+        assertEquals(
+            "岩手県花巻に生まれる。",
+            aboutHtml("""<tr><td class="header">人物について：</td><td>岩手県花巻に生まれる。</td></tr>""", "人物について"),
+        )
     }
 }
