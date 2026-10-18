@@ -70,7 +70,7 @@ private const val SWIPE_DP = 48
 /**
  * 本文を縦書きで 1 ページずつ読む画面。本文は WebView に段組みで描き（assets/reader）、
  * めくる操作はその上に重ねた透明な層で受ける。
- * - 左側のタップか左へのスワイプで次のページ、右側のタップか右へのスワイプで前のページ。
+ * - 左側のタップか右へのスワイプ（紙の本のようにページを右へ送る）で次のページ、右側のタップか左へのスワイプで前のページ。
  * - 中央のタップで、戻るボタンとページのスライダーを出し入れする。
  * 読んだ位置は読了率（0〜1）で作品ごとに残し、次に開いたときにその位置から始める。
  */
@@ -199,8 +199,8 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = { dx = 0f },
                         onDragEnd = {
-                            if (dx < -swipe) turn(1)
-                            if (dx > swipe) turn(-1)
+                            if (dx > swipe) turn(1)
+                            if (dx < -swipe) turn(-1)
                         },
                     ) { _, amount -> dx += amount }
                 },
@@ -226,10 +226,9 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .navigationBarsPadding().padding(horizontal = 24.dp, vertical = 12.dp),
                 ) {
-                    // 縦書きに合わせ、右端を最初のページ、左端を最後のページにする
                     Slider(
-                        value = (pages - 1 - page).toFloat(),
-                        onValueChange = { jump(pages - 1 - it.roundToInt()) },
+                        value = page.toFloat(),
+                        onValueChange = { jump(it.roundToInt()) },
                         valueRange = 0f..(pages - 1).toFloat(),
                     )
                 }
