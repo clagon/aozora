@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.TabRowDefaults
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -415,7 +416,12 @@ private fun KanaGrid(push: (Screen) -> Unit) {
 private fun NdcCard(digit: Int, name: String, dao: CatalogDao, kidsOnly: Boolean, onClick: () -> Unit) {
     val (color, icon) = NDC_CARD_STYLES[digit]
     val count by remember(digit, kidsOnly) { dao.ndcCount(digit.toString(), kidsOnly) }.collectAsState(null)
-    Box(Modifier.aspectRatio(1.66f).clip(RoundedCornerShape(6.dp)).background(color).clickable(onClick = onClick).padding(14.dp)) {
+    // 作品のない分野（児童書で起きる）は、第 2 次区分と同じく薄くして押せなくする
+    val empty = count == 0
+    Box(
+        Modifier.aspectRatio(1.66f).alpha(if (empty) 0.4f else 1f).clip(RoundedCornerShape(6.dp)).background(color)
+            .clickable(enabled = count?.let { it > 0 } == true, onClick = onClick).padding(14.dp),
+    ) {
         Column {
             Text(name, color = Color.White, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium)
             count?.let { Text("%,d件".format(it), color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodyLarge) }
@@ -457,8 +463,8 @@ private fun WorkList(works: Flow<List<WorkItem>>) {
                 Row(Modifier.fillMaxWidth().padding(end = 16.dp, top = 8.dp, bottom = 8.dp, start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     BookCover(work, Modifier.width(64.dp), small = true)
                     Column(Modifier.padding(start = 16.dp).weight(1f)) {
-                        Text(work.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        if (work.subtitle.isNotBlank()) Text(work.subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                        Text(work.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        if (work.subtitle.isNotBlank()) Text(work.subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(work.kanaType, color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
                         work.authors?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp)) }
                     }
