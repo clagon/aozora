@@ -77,14 +77,21 @@ class CatalogTest {
     }
 
     @Test
-    fun aboutHtmlTakesTheAboutCellOfTheCard() {
-        // 図書カード（card789）の実際の行を短くしたもの
-        val card = """<tr><td class="header">作品について：</td><td>明治38（1905）年1月、「ホトトギス」に発表。<br><a href="http://ja.wikipedia.org/">「吾輩は猫である」</a></td></tr>
+    fun aboutHtmlTakesTheAboutCellWithoutTheWikipediaLink() {
+        // 図書カード（card789）の実際の行を短くしたもの。紹介文の後ろに Wikipedia へのリンクがつく
+        val wikipedia =
+            """<a href="http://ja.wikipedia.org/" target="_blank">""" +
+                """<img align="middle" src="../images/wikipedia_logo_rounded.png" alt="wikipediaアイコン"></a>""" +
+                """「<a href="http://ja.wikipedia.org/wiki/%E5%90%BE" target="_blank">吾輩は猫である</a>」"""
+        val card = """<tr><td class="header">作品について：</td><td>明治38（1905）年1月、「ホトトギス」に発表。<br>$wikipedia</td></tr>
 <tr><td class="header">文字遣い種別：</td><td>新字新仮名</td></tr>"""
+        assertEquals("明治38（1905）年1月、「ホトトギス」に発表。<br>", aboutHtml(card, "作品について"))
+        assertNull(aboutHtml("""<tr><td class="header">文字遣い種別：</td><td>新字新仮名</td></tr>""", "作品について"))
+        // 作家ページも同じ形の欄を持つ。リンクしかない欄は空になる
+        assertEquals("", aboutHtml("""<tr><td class="header">人物について：</td><td>$wikipedia</td></tr>""", "人物について"))
         assertEquals(
-            """明治38（1905）年1月、「ホトトギス」に発表。<br><a href="http://ja.wikipedia.org/">「吾輩は猫である」</a>""",
-            aboutHtml(card),
+            "岩手県花巻に生まれる。",
+            aboutHtml("""<tr><td class="header">人物について：</td><td>岩手県花巻に生まれる。</td></tr>""", "人物について"),
         )
-        assertNull(aboutHtml("""<tr><td class="header">文字遣い種別：</td><td>新字新仮名</td></tr>"""))
     }
 }

@@ -89,6 +89,10 @@ data class Credit(val workId: Int, val personId: Int, val role: String)
 @Entity(tableName = "work_notes")
 data class WorkNote(@PrimaryKey val workId: Int, val about: String)
 
+/** 作家ページから取り出した「人物について」。[WorkNote] と同じ扱い。 */
+@Entity(tableName = "person_notes")
+data class PersonNote(@PrimaryKey val personId: Int, val about: String)
+
 /** 作品詳細に並べる作家の 1 人。role は [Credit.role] と同じ。 */
 data class CreditItem(val personId: Int, val lastName: String, val firstName: String, val role: String) {
     /** 表示用の名前。[PersonItem.name] と同じ形。 */
@@ -186,6 +190,17 @@ abstract class CatalogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     abstract suspend fun saveNote(note: WorkNote)
 
+    /** 作家詳細に出す作家の全項目。 */
+    @Query("SELECT * FROM persons WHERE id = :id")
+    abstract fun person(id: Int): Flow<Person?>
+
+    /** 残してある「人物について」。まだ取りに行っていなければ null。 */
+    @Query("SELECT about FROM person_notes WHERE personId = :personId")
+    abstract suspend fun personAbout(personId: Int): String?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun savePersonNote(note: PersonNote)
+
     /** 作家が役割を問わず関わった作品。 */
     @Query("$WORK_ITEM WHERE w.id IN (SELECT workId FROM credits WHERE personId = :personId) ORDER BY w.sortYomi")
     abstract fun worksByPerson(personId: Int): Flow<List<WorkItem>>
@@ -231,7 +246,11 @@ abstract class CatalogDao {
  * 自動バックアップの対象から外している（res/xml/data_extraction_rules.xml）。
  * 本棚などの利用者データは別の DB に置く。版を上げるときは移行を書かずに作り直す（AozoraApp）。
  */
-@Database(entities = [Work::class, Person::class, Credit::class, WorkNote::class], version = 2, exportSchema = false)
+@Database(
+    entities = [Work::class, Person::class, Credit::class, WorkNote::class, PersonNote::class],
+    version = 3,
+    exportSchema = false,
+)
 abstract class CatalogDatabase : RoomDatabase() {
     /** Room が実装を生成する。 */
     abstract fun catalogDao(): CatalogDao

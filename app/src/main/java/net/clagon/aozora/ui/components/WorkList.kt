@@ -21,16 +21,23 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.Flow
 import net.clagon.aozora.catalog.WorkItem
 
-/** 作品の一覧。各行は小さな表紙・作品名・文字遣い種別・著者で、押すと onClick に作品を渡す。 */
+/**
+ * 作品の一覧。各行は小さな表紙・作品名・文字遣い種別・著者で、押すと onClick に作品を渡す。
+ * header は一覧の先頭に置き、一覧と一緒にスクロールする。
+ */
 @Composable
-fun WorkList(works: Flow<List<WorkItem>>, onClick: (WorkItem) -> Unit) {
+fun WorkList(works: Flow<List<WorkItem>>, onClick: (WorkItem) -> Unit, header: @Composable () -> Unit = {}) {
     val items by works.collectAsState(null)
     when {
         items == null -> {}
 
-        items!!.isEmpty() -> Text("作品がありません", Modifier.padding(16.dp))
+        items!!.isEmpty() -> Column {
+            header()
+            Text("作品がありません", Modifier.padding(16.dp))
+        }
 
         else -> LazyColumn {
+            item { header() }
             items(items!!, key = { it.id }) { work ->
                 Row(
                     Modifier.fillMaxWidth().clickable {

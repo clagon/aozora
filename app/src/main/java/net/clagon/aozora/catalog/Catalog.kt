@@ -79,11 +79,18 @@ class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
      * 作品の「作品について」。残してあればそれを返し、なければ図書カードから取り出して残す。
      * 図書カードに書かれていなければ空文字、取りに行けなければ null（次に開いたときに取りに行き直す）。
      */
-    suspend fun about(work: Work): String? {
-        dao.about(work.id)?.let { return it }
-        val about = try {
+    suspend fun about(work: Work): String? = dao.about(work.id)
+        ?: fetchAbout(work.cardUrl, "作品について")?.also { dao.saveNote(WorkNote(work.id, it)) }
+
+    /** 作家の「人物について」。[about] の作品と同じく、作家ページから取り出して残す。 */
+    suspend fun about(person: Person): String? = dao.personAbout(person.id)
+        ?: fetchAbout(personUrl(person.id), "人物について")?.also { dao.savePersonNote(PersonNote(person.id, it)) }
+
+    /** ページの label の欄を文字にして返す。欄がなければ空文字、取りに行けなければ null。 */
+    private suspend fun fetchAbout(url: String, label: String): String? {
+        val page = try {
             withContext(Dispatchers.IO) {
-                val conn = connect(work.cardUrl)
+                val conn = connect(url)
                 try {
                     conn.inputStream.reader().use { it.readText() }
                 } finally {
@@ -95,11 +102,9 @@ class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
         } catch (e: Exception) {
             return null
         }
-        // Wikipedia のロゴ画像は Html.fromHtml で置換文字になるので先に外す
-        val text = aboutHtml(about)?.replace(Regex("<img[^>]*>"), "")
-            ?.let { Html.fromHtml(it, Html.FROM_HTML_MODE_COMPACT).toString().trim() }.orEmpty()
-        dao.saveNote(WorkNote(work.id, text))
-        return text
+        return aboutHtml(page, label)?.let {
+            Html.fromHtml(it, Html.FROM_HTML_MODE_COMPACT).toString().trim()
+        }.orEmpty()
     }
 
     // ponytail: 全件をメモリに載せてから DB に入れる（作品 1.8 万件で数十 MB）。重くなったら行ごとに insert する
@@ -123,9 +128,24 @@ private fun connect(url: String) = (URL(url).openConnection() as HttpURLConnecti
     readTimeout = 30_000
 }
 
-/** 図書カードの HTML から「作品について」の欄の中身（HTML のまま）を取り出す。欄がなければ null。 */
-internal fun aboutHtml(card: String): String? =
-    Regex("""作品について：</td><td>(.*?)</td>""", RegexOption.DOT_MATCHES_ALL).find(card)?.groupValues?.get(1)
+/** 作家ページの URL。 */
+fun personUrl(personId: Int) = "https://www.aozora.gr.jp/index_pages/person$personId.html"
+
+/**
+ * 図書カード・作家ページの HTML から、label（「作品について」「人物について」）の欄の中身を HTML のまま取り出す。
+ * 欄がなければ null。
+ */
+internal fun aboutHtml(page: String, label: String): String? =
+    Regex("""$label：</td><td>(.*?)</td>""", RegexOption.DOT_MATCHES_ALL).find(page)?.groupValues?.get(1)
+        ?.replace(WIKIPEDIA_LINK, "")
+        // 残った画像は Html.fromHtml で置換文字になるので外す
+        ?.replace(Regex("<img[^>]*>"), "")
+
+/**
+ * 欄の末尾や全体に置かれた Wikipedia へのリンク（ロゴ画像と「項目名」）。紹介文ではないので取り込まない。
+ * これしかない欄は空になり、画面には出さない。
+ */
+private val WIKIPEDIA_LINK = Regex("""<a href="https?://ja\.wikipedia\.org/"[^>]*>.*?</a>「<a [^>]*>.*?</a>」""")
 
 /** CSV から読み取ったカタログ全体。[CatalogDao.replaceAll] でそのまま DB に入れる。 */
 class ParsedCatalog(val works: List<Work>, val persons: List<Person>, val credits: List<Credit>)

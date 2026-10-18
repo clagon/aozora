@@ -25,6 +25,7 @@ import net.clagon.aozora.catalog.NDC_CLASSES
 import net.clagon.aozora.catalog.WorkItem
 import net.clagon.aozora.catalog.kanaRange
 import net.clagon.aozora.ui.components.WorkList
+import net.clagon.aozora.ui.person.PersonDetailScreen
 import net.clagon.aozora.ui.search.NdcDivisionList
 import net.clagon.aozora.ui.work.WorkDetailScreen
 
@@ -56,8 +57,8 @@ sealed interface Screen {
         override val title = ""
     }
 
-    // ponytail: 作家詳細ができるまでの仮の画面。作品を役割ごとに分けずに並べる
-    data class PersonWorks(val personId: Int, override val title: String) : Screen
+    /** 作家詳細。見出しは作家名。 */
+    data class PersonDetail(val personId: Int, override val title: String) : Screen
 }
 
 /** 積んだ画面の共通の枠。上部に戻るボタンと見出しを置き、中身を画面の種類で切り替える。 */
@@ -97,7 +98,7 @@ fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back
                 open,
             )
 
-            is Screen.PersonWorks -> WorkList(remember(screen) { dao.worksByPerson(screen.personId) }, open)
+            is Screen.PersonDetail -> PersonDetailScreen(screen.personId, catalog, open)
 
             is Screen.WorkDetail -> WorkDetailScreen(screen.workId, catalog, push)
         }

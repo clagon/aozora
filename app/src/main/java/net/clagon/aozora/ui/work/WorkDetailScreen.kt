@@ -68,7 +68,7 @@ fun WorkDetailScreen(workId: Int, catalog: Catalog, push: (Screen) -> Unit) {
                         label,
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.clickable { push(Screen.PersonWorks(person.personId, person.name)) },
+                        modifier = Modifier.clickable { push(Screen.PersonDetail(person.personId, person.name)) },
                     )
                 }
                 NdcTagRow(w.ndc)
