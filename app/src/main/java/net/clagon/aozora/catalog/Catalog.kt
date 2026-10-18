@@ -123,7 +123,7 @@ class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
 }
 
 /** 青空文庫のサイトへの接続。サイトが応答しないときに待ち続けないよう、時間の上限をつける。 */
-private fun connect(url: String) = (URL(url).openConnection() as HttpURLConnection).apply {
+internal fun connect(url: String) = (URL(url).openConnection() as HttpURLConnection).apply {
     connectTimeout = 15_000
     readTimeout = 30_000
 }

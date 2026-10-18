@@ -5,6 +5,8 @@ import androidx.room.Room
 import kotlinx.coroutines.MainScope
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogDatabase
+import net.clagon.aozora.reader.Texts
+import java.io.File
 
 /**
  * アプリ全体で 1 つだけ持つ依存の置き場。DI ライブラリは使わず、画面からは
@@ -22,6 +24,9 @@ class AozoraApp : Application() {
             .build()
         Catalog(db.catalogDao(), scope)
     }
+
+    /** 作品の本文の置き場。読んだ本文は files/texts に残る。 */
+    val texts by lazy { Texts(File(filesDir, "texts")) }
 
     override fun onCreate() {
         super.onCreate()
