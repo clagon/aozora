@@ -30,9 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -62,7 +60,7 @@ private enum class Tab(val label: String, val icon: ImageVector, val selectedIco
 @Composable
 fun App() {
     val catalog = (LocalContext.current.applicationContext as AozoraApp).catalog
-    var tab by rememberSaveable { mutableStateOf(Tab.Home) }
+    var tab by rememberSaveableEnum(Tab.Home)
     // ponytail: 画面の積み上げは回転などで作り直されると消える。困ったら Navigation を入れる
     val stack = remember { mutableStateListOf<Screen>() }
     val push: (Screen) -> Unit = { stack += it }

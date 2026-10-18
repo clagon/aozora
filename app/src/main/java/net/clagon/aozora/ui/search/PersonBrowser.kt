@@ -26,9 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,11 +36,12 @@ import net.clagon.aozora.catalog.CatalogDao
 import net.clagon.aozora.catalog.KanaRow
 import net.clagon.aozora.catalog.PersonItem
 import net.clagon.aozora.ui.Screen
+import net.clagon.aozora.ui.rememberSaveableEnum
 
 /** 作家別。左に五十音の行の縦タブ、右に選んだ行の作家一覧を並べる。 */
 @Composable
 fun PersonBrowser(dao: CatalogDao, push: (Screen) -> Unit) {
-    var selected by rememberSaveable { mutableStateOf(KanaRow.A) }
+    var selected by rememberSaveableEnum(KanaRow.A)
     val persons by remember(selected) { dao.personsByYomi(selected.range.from, selected.range.to) }.collectAsState(null)
     Row(Modifier.fillMaxSize()) {
         Column(Modifier.width(88.dp).fillMaxHeight().background(MaterialTheme.colorScheme.surfaceContainerHigh).verticalScroll(rememberScrollState())) {
