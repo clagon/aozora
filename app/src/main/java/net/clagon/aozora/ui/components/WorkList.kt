@@ -1,5 +1,6 @@
 package net.clagon.aozora.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,17 +21,16 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.Flow
 import net.clagon.aozora.catalog.WorkItem
 
-/** 作品の一覧。各行は小さな表紙・作品名・文字遣い種別・著者。 */
+/** 作品の一覧。各行は小さな表紙・作品名・文字遣い種別・著者で、押すと onClick に作品を渡す。 */
 @Composable
-fun WorkList(works: Flow<List<WorkItem>>) {
+fun WorkList(works: Flow<List<WorkItem>>, onClick: (WorkItem) -> Unit) {
     val items by works.collectAsState(null)
     when {
         items == null -> {}
         items!!.isEmpty() -> Text("作品がありません", Modifier.padding(16.dp))
         else -> LazyColumn {
-            // ponytail: 作品詳細ができるまでは押しても何もしない
             items(items!!, key = { it.id }) { work ->
-                Row(Modifier.fillMaxWidth().padding(end = 16.dp, top = 8.dp, bottom = 8.dp, start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clickable { onClick(work) }.padding(end = 16.dp, top = 8.dp, bottom = 8.dp, start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     BookCover(work, Modifier.width(64.dp), small = true)
                     Column(Modifier.padding(start = 16.dp).weight(1f)) {
                         Text(work.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)

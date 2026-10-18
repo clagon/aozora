@@ -6,6 +6,7 @@ import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
@@ -81,6 +82,19 @@ data class Person(
 @Entity(tableName = "credits", primaryKeys = ["workId", "personId", "role"], indices = [Index("personId")])
 data class Credit(val workId: Int, val personId: Int, val role: String)
 
+/**
+ * 図書カードから取り出した「作品について」。CSV にないので、作品詳細を開いたときに取りに行って残す。
+ * カタログを取り直しても消さない。図書カードに書かれていない作品は空文字で残し、取りに行き直さない。
+ */
+@Entity(tableName = "work_notes")
+data class WorkNote(@PrimaryKey val workId: Int, val about: String)
+
+/** 作品詳細に並べる作家の 1 人。role は [Credit.role] と同じ。 */
+data class CreditItem(val personId: Int, val lastName: String, val firstName: String, val role: String) {
+    /** 表示用の名前。[PersonItem.name] と同じ形。 */
+    val name get() = "$lastName $firstName".trim()
+}
+
 /** 一覧の 1 行。authors は役割が著者の作家を「、」でつないだもの。 */
 data class WorkItem(
     val id: Int,
@@ -142,6 +156,25 @@ abstract class CatalogDao {
     @Query("$WORK_ITEM WHERE $WORK_IN_YOMI ORDER BY w.sortYomi")
     abstract fun worksByYomi(from: String, to: String): Flow<List<WorkItem>>
 
+    /** 作品詳細に出す作品の全項目。 */
+    @Query("SELECT * FROM works WHERE id = :id")
+    abstract fun work(id: Int): Flow<Work?>
+
+    /** 作品詳細の表紙と見出しに使う、一覧と同じ形の 1 件。 */
+    @Query("$WORK_ITEM WHERE w.id = :id")
+    abstract fun workItem(id: Int): Flow<WorkItem?>
+
+    /** 作品に関わった作家。CSV の行の順（著者が先）に並べる。 */
+    @Query("SELECT p.id AS personId, p.lastName, p.firstName, c.role FROM credits c JOIN persons p ON p.id = c.personId WHERE c.workId = :workId ORDER BY c.rowid")
+    abstract fun creditsOf(workId: Int): Flow<List<CreditItem>>
+
+    /** 残してある「作品について」。まだ取りに行っていなければ null。 */
+    @Query("SELECT about FROM work_notes WHERE workId = :workId")
+    abstract suspend fun about(workId: Int): String?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    abstract suspend fun saveNote(note: WorkNote)
+
     /** 作家が役割を問わず関わった作品。 */
     @Query("$WORK_ITEM WHERE w.id IN (SELECT workId FROM credits WHERE personId = :personId) ORDER BY w.sortYomi")
     abstract fun worksByPerson(personId: Int): Flow<List<WorkItem>>
@@ -175,9 +208,9 @@ abstract class CatalogDao {
 /**
  * カタログ専用の DB（`catalog.db`）。いつでも公式 CSV から作り直せるので、
  * 自動バックアップの対象から外している（res/xml/data_extraction_rules.xml）。
- * 本棚などの利用者データは別の DB に置く。
+ * 本棚などの利用者データは別の DB に置く。版を上げるときは移行を書かずに作り直す（AozoraApp）。
  */
-@Database(entities = [Work::class, Person::class, Credit::class], version = 1, exportSchema = false)
+@Database(entities = [Work::class, Person::class, Credit::class, WorkNote::class], version = 2, exportSchema = false)
 abstract class CatalogDatabase : RoomDatabase() {
     /** Room が実装を生成する。 */
     abstract fun catalogDao(): CatalogDao

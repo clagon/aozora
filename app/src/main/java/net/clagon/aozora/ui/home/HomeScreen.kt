@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,17 +28,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogState
 import net.clagon.aozora.catalog.WorkItem
-import net.clagon.aozora.catalog.ndcTags
 import net.clagon.aozora.ui.Screen
 import net.clagon.aozora.ui.components.BookCover
 import net.clagon.aozora.ui.components.CatalogStatus
+import net.clagon.aozora.ui.components.NdcTagRow
 
 // 1 件目を表紙と詳細で大きく出し、続く 3 件を表紙だけで並べる
 private const val HOME_NEW_WORKS = 4
@@ -56,7 +53,7 @@ fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
             Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CatalogStatus(catalog) }
         }
         SectionHeader("新着作品") { push(Screen.NewWorks) }
-        works?.takeIf { it.isNotEmpty() }?.let { CoverShowcase(it) }
+        works?.takeIf { it.isNotEmpty() }?.let { CoverShowcase(it) { work -> push(Screen.WorkDetail(work.id)) } }
     }
 }
 
@@ -84,15 +81,15 @@ private fun SectionHeader(title: String, onMore: () -> Unit) {
     }
 }
 
-/** 1 件目は表紙と詳細を横に並べ、残りは表紙を 3 列で並べる。表紙の幅はどちらも 3 列の 1 マス分。 */
+/** 1 件目は表紙と詳細を横に並べ、残りは表紙を 3 列で並べる。表紙の幅はどちらも 3 列の 1 マス分。押すと onClick に作品を渡す。 */
 @Composable
-private fun CoverShowcase(works: List<WorkItem>) {
+private fun CoverShowcase(works: List<WorkItem>, onClick: (WorkItem) -> Unit) {
     val gap = 16.dp
     BoxWithConstraints {
         val cell = (maxWidth - gap * 2) / 3
         Column(verticalArrangement = Arrangement.spacedBy(gap)) {
             val first = works.first()
-            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            Row(Modifier.clickable { onClick(first) }, horizontalArrangement = Arrangement.spacedBy(gap)) {
                 BookCover(first, Modifier.width(cell))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(first.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -104,23 +101,8 @@ private fun CoverShowcase(works: List<WorkItem>) {
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                works.drop(1).forEach { BookCover(it, Modifier.width(cell)) }
+                works.drop(1).forEach { BookCover(it, Modifier.width(cell).clickable { onClick(it) }) }
             }
-        }
-    }
-}
-
-/** 分野タグの文字色と背景色。1 つ目を緑、2 つ目を橙にし、それ以降は繰り返す。 */
-private val TAG_COLORS = listOf(Color(0xFF3FA36B) to Color(0xFFE6F4EC), Color(0xFFE8794A) to Color(0xFFFDEEE6))
-
-/** 作品の分類（[ndcTags]）をタグで並べる。幅が足りなければ折り返す。 */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun NdcTagRow(ndc: String) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        ndcTags(ndc).forEachIndexed { i, tag ->
-            val (fg, bg) = TAG_COLORS[i % TAG_COLORS.size]
-            Text(tag, color = fg, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.background(bg).padding(horizontal = 8.dp, vertical = 2.dp))
         }
     }
 }
