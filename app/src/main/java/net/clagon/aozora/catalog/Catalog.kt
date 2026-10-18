@@ -26,7 +26,7 @@ sealed interface CatalogState {
  * カタログの取り込みと更新。初回起動時に取り込み、以後は利用者の操作でだけ取り直す。
  * 取り込みはアプリ全体のスコープで走らせ、画面を離れても中断されないようにしている。
  */
-class Catalog(private val dao: CatalogDao, private val scope: CoroutineScope) {
+class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
     private val _state = MutableStateFlow<CatalogState>(CatalogState.Ready)
     val state = _state.asStateFlow()
     /** DB を読めないときは件数を出さない（読めない理由は update() 側で Failed として見せる）。 */
