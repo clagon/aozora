@@ -42,4 +42,14 @@ class CatalogTest {
             catalog.credits,
         )
     }
+
+    @Test
+    fun ndcTagsFollowTheOriginalApp() {
+        assertEquals(listOf("詩歌", "記録・手記・ルポルタージュ"), ndcTags("NDC 911 916"))
+        assertEquals(listOf("文学", "小説・物語"), ndcTags("NDC K913"))
+        assertEquals(listOf("歴史", "伝記"), ndcTags("NDC 289"))
+        assertEquals(listOf("文学", "日本文学"), ndcTags("NDC 910"))
+        assertEquals(emptyList<String>(), ndcTags(""))
+        assertEquals(emptyList<String>(), ndcTags("NDC "))
+    }
 }

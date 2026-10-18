@@ -73,10 +73,17 @@ data class Person(
 data class Credit(val workId: Int, val personId: Int, val role: String)
 
 /** 一覧の 1 行。authors は役割が著者の作家を「、」でつないだもの。 */
-data class WorkItem(val id: Int, val title: String, val subtitle: String, val authors: String?)
+data class WorkItem(
+    val id: Int,
+    val title: String,
+    val subtitle: String,
+    val firstAppearance: String,
+    val ndc: String,
+    val authors: String?,
+)
 
 private const val WORK_ITEM = """
-    SELECT w.id, w.title, w.subtitle,
+    SELECT w.id, w.title, w.subtitle, w.firstAppearance, w.ndc,
         (SELECT GROUP_CONCAT(TRIM(p.lastName || ' ' || p.firstName), '、')
          FROM credits c JOIN persons p ON p.id = c.personId
          WHERE c.workId = w.id AND c.role = '著者') AS authors
@@ -93,6 +100,10 @@ abstract class CatalogDao {
     /** code は NDC の上 2 桁（例: "91"）。児童書（K つき）も含める。ndc は "NDC 913" や "NDC 756 914" の形。 */
     @Query("$WORK_ITEM WHERE ' ' || w.ndc LIKE '% ' || :code || '%' OR ' ' || w.ndc LIKE '% K' || :code || '%' ORDER BY w.sortYomi")
     abstract fun worksByNdc(code: String): Flow<List<WorkItem>>
+
+    /** worksByNdc と同じ条件で、第 1 次区分（digit は 1 桁）ごとの件数を数える。 */
+    @Query("SELECT COUNT(*) FROM works WHERE ' ' || ndc LIKE '% ' || :digit || '%' OR ' ' || ndc LIKE '% K' || :digit || '%'")
+    abstract fun ndcClassCount(digit: String): Flow<Int>
 
     @Query("$WORK_ITEM WHERE w.sortYomi >= :from AND w.sortYomi < :to AND (:kidsOnly = 0 OR w.ndc LIKE '%K%') ORDER BY w.sortYomi")
     abstract fun worksByYomi(from: String, to: String, kidsOnly: Boolean): Flow<List<WorkItem>>
