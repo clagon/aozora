@@ -35,10 +35,16 @@ fun KanaGrid(push: (Screen) -> Unit) {
                 Spacer(Modifier.aspectRatio(1.4f))
             } else {
                 Box(
-                    Modifier.aspectRatio(1.4f).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable { push(Screen.KanaWorks(kana)) },
+                    Modifier.aspectRatio(1.4f).clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .clickable { push(Screen.KanaWorks(kana)) },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(kana, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        kana,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }

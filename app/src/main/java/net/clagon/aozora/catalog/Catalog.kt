@@ -1,10 +1,6 @@
 package net.clagon.aozora.catalog
 
 import android.text.Html
-import java.io.Reader
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.zip.ZipInputStream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,6 +14,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.Reader
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.zip.ZipInputStream
 
 /** 青空文庫公式の全作品・全作家の一覧（拡張版・UTF-8）。zip の中に CSV が 1 つ入っている。 */
 private const val CATALOG_URL = "https://www.aozora.gr.jp/index_pages/list_person_all_extended_utf8.zip"
@@ -26,8 +26,10 @@ private const val CATALOG_URL = "https://www.aozora.gr.jp/index_pages/list_perso
 sealed interface CatalogState {
     /** 取り込み中ではない。カタログが空のこともある（件数は [Catalog.workCount] で見る）。 */
     data object Ready : CatalogState
+
     /** ダウンロードまたは DB への書き込みの途中。 */
     data object Updating : CatalogState
+
     /** 直前の取り込みが失敗した。message は利用者にそのまま見せる理由。前のカタログは残っている。 */
     data class Failed(val message: String) : CatalogState
 }
@@ -38,15 +40,19 @@ sealed interface CatalogState {
  */
 class Catalog(val dao: CatalogDao, private val scope: CoroutineScope) {
     private val _state = MutableStateFlow<CatalogState>(CatalogState.Ready)
+
     /** 取り込みの状態。CatalogStatus とホームが購読する。 */
     val state = _state.asStateFlow()
+
     /** DB を読めないときは件数を出さない（読めない理由は update() 側で Failed として見せる）。 */
     val workCount = dao.workCount().catch {}
+
     /**
      * 分野ごとの件数。起動時から数え始めておき、探すタブを開いた時点でそろっているようにする
      * （数え終わる前のカードを出すと、作品のない分野が押せる見た目で一瞬出てしまう）。数え終わるまでは null。
      */
-    val ndcCounts = dao.allNdc().map(::countNdc).flowOn(Dispatchers.Default).catch {}.stateIn(scope, SharingStarted.Eagerly, null)
+    val ndcCounts = dao.allNdc().map(::countNdc).flowOn(Dispatchers.Default).catch {
+    }.stateIn(scope, SharingStarted.Eagerly, null)
 
     /** 起動時に AozoraApp から呼ぶ。カタログが空のときだけ取り込む（2 回目以降の起動では何もしない）。 */
     fun updateIfEmpty() = update(onlyIfEmpty = true)
@@ -212,12 +218,26 @@ internal fun readCsv(reader: Reader): Sequence<List<String>> = sequence {
                 }
             }
             field.append(ch)
-        } else when (ch) {
-            '"' -> inQuotes = true
-            ',' -> { row += field.toString(); field.clear() }
-            '\r' -> {}
-            '\n' -> { row += field.toString(); field.clear(); yield(row.toList()); row.clear() }
-            else -> field.append(ch)
+        } else {
+            when (ch) {
+                '"' -> inQuotes = true
+
+                ',' -> {
+                    row += field.toString()
+                    field.clear()
+                }
+
+                '\r' -> {}
+
+                '\n' -> {
+                    row += field.toString()
+                    field.clear()
+                    yield(row.toList())
+                    row.clear()
+                }
+
+                else -> field.append(ch)
+            }
         }
         c = r.read()
     }

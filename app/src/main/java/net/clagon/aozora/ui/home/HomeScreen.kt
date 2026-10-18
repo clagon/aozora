@@ -61,11 +61,17 @@ fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
 @Composable
 private fun SearchBarPlaceholder() {
     Row(
-        Modifier.padding(top = 12.dp).fillMaxWidth().height(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 16.dp),
+        Modifier.padding(top = 12.dp).fillMaxWidth().height(48.dp).clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("作品名、作家名", Modifier.padding(start = 16.dp), color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            "作品名、作家名",
+            Modifier.padding(start = 16.dp),
+            color = MaterialTheme.colorScheme.outline,
+            style = MaterialTheme.typography.bodyLarge,
+        )
     }
 }
 
@@ -73,10 +79,19 @@ private fun SearchBarPlaceholder() {
 @Composable
 private fun SectionHeader(title: String, onMore: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Text(
+            title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+        )
         Row(Modifier.clickable(onClick = onMore).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("もっと見る", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge)
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }
@@ -93,9 +108,21 @@ private fun CoverShowcase(works: List<WorkItem>, onClick: (WorkItem) -> Unit) {
                 BookCover(first, Modifier.width(cell))
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(first.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    first.authors?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.titleMedium) }
+                    first.authors?.let {
+                        Text(
+                            it,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
                     if (first.firstAppearance.isNotEmpty()) {
-                        Text("初出：${first.firstAppearance}", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            "初出：${first.firstAppearance}",
+                            color = MaterialTheme.colorScheme.outline,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                     NdcTagRow(first.ndc)
                 }

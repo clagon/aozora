@@ -27,7 +27,9 @@ fun CatalogStatus(catalog: Catalog) {
                 CircularProgressIndicator()
                 Text("カタログを取り込んでいます…")
             }
+
             is CatalogState.Failed -> Text("カタログを取り込めませんでした\n${s.message}")
+
             CatalogState.Ready -> {}
         }
         count?.let { Text("作品 $it 件") }

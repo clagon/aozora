@@ -47,11 +47,20 @@ fun WorkDetailScreen(workId: Int, catalog: Catalog, push: (Screen) -> Unit) {
     val i = item ?: return
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        Row(
+            Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
             BookCover(i, Modifier.width(96.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(w.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (w.subtitle.isNotBlank()) Text(w.subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                if (w.subtitle.isNotBlank()) {
+                    Text(
+                        w.subtitle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
                 credits.forEach { person ->
                     // 著者以外（翻訳者など）は役割を添えて、著者と見分けられるようにする
                     val label = if (person.role == "著者") person.name else "${person.name}（${person.role}）"
@@ -85,7 +94,12 @@ fun WorkDetailScreen(workId: Int, catalog: Catalog, push: (Screen) -> Unit) {
 private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
     Box(Modifier.fillMaxWidth().height(10.dp).background(MaterialTheme.colorScheme.surfaceContainerHigh))
     Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
         content()
     }
 }
@@ -95,7 +109,12 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 private fun Field(label: String, value: String) {
     if (value.isBlank()) return
     Row {
-        Text(label, color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(112.dp))
+        Text(
+            label,
+            color = MaterialTheme.colorScheme.outline,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.width(112.dp),
+        )
         Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
     }
 }

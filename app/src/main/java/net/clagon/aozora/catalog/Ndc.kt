@@ -7,6 +7,7 @@ class NdcClass(val digit: Int, val name: String, val divisions: List<String>) {
 }
 
 // NDC 新訂 10 版の第 2 次区分表
+@Suppress("ktlint:standard:max-line-length", "ktlint:standard:argument-list-wrapping")
 val NDC_CLASSES = listOf(
     NdcClass(0, "総記", listOf("総記", "図書館・図書館情報学", "図書・書誌学", "百科事典", "一般論文集・一般講演集", "逐次刊行物", "団体", "ジャーナリズム・新聞", "叢書・全集・選集", "貴重書・郷土資料・その他の特別コレクション")),
     NdcClass(1, "哲学", listOf("哲学", "哲学各論", "東洋思想", "西洋哲学", "心理学", "倫理学・道徳", "宗教", "神道", "仏教", "キリスト教")),
@@ -21,7 +22,8 @@ val NDC_CLASSES = listOf(
 )
 
 // 文学（9xx）の 3 桁目が表す文学形式。0 と 9 は形式ではないので null
-private val LITERARY_FORMS = listOf(null, "詩歌", "戯曲", "小説・物語", "評論・エッセイ・随筆", "日記・書簡・紀行", "記録・手記・ルポルタージュ", "箴言・アフォリズム・寸言", "作品集", null)
+private val LITERARY_FORMS =
+    listOf(null, "詩歌", "戯曲", "小説・物語", "評論・エッセイ・随筆", "日記・書簡・紀行", "記録・手記・ルポルタージュ", "箴言・アフォリズム・寸言", "作品集", null)
 
 /**
  * 作品カードに出すタグ。分類ごとに文学なら形式名、それ以外は第 2 次区分の名前を出す。
@@ -31,7 +33,7 @@ fun ndcTags(ndc: String): List<String> {
     val codes = ndc.removePrefix("NDC").split(' ').map { it.removePrefix("K") }
         .filter { it.length == 3 && it.all(Char::isDigit) }
         .map { code -> code.map(Char::digitToInt) }
-    val tags = codes.map { (c, d, f) -> (if (c == 9) LITERARY_FORMS[f] else null) ?: NDC_CLASSES[c].divisions[d] }.distinct()
+    val tags = codes.map { (c, d, f) -> LITERARY_FORMS[f].takeIf { c == 9 } ?: NDC_CLASSES[c].divisions[d] }.distinct()
     return if (codes.size == 1) listOf(NDC_CLASSES[codes[0][0]].name) + tags else tags
 }
 
@@ -68,6 +70,7 @@ fun countNdc(ndcs: List<String>): NdcCounts {
 data class YomiRange(val from: String, val to: String)
 
 private const val HIRAGANA_END = "ゟ" // 平仮名ブロックの末尾。これ以上は片仮名など
+
 /** 平仮名で始まらない読み（作家別の「その他」、作品別の「他」）を表す範囲。 */
 private val OTHER_YOMI = YomiRange("", "")
 

@@ -23,7 +23,12 @@ fun NdcTagRow(ndc: String) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         ndcTags(ndc).forEachIndexed { i, tag ->
             val (fg, bg) = TAG_COLORS[i % TAG_COLORS.size]
-            Text(tag, color = fg, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.background(bg).padding(horizontal = 8.dp, vertical = 2.dp))
+            Text(
+                tag,
+                color = fg,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.background(bg).padding(horizontal = 8.dp, vertical = 2.dp),
+            )
         }
     }
 }

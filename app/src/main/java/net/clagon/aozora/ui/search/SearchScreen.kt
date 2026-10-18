@@ -46,7 +46,19 @@ fun SearchScreen(catalog: Catalog, push: (Screen) -> Unit) {
                     onClick = { selected = i },
                     selectedContentColor = MaterialTheme.colorScheme.onSurface,
                     unselectedContentColor = MaterialTheme.colorScheme.outline,
-                    text = { Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Normal) },
+                    text = {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = if (i ==
+                                selected
+                            ) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Normal
+                            },
+                        )
+                    },
                 )
             }
         }

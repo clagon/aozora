@@ -107,17 +107,26 @@ data class WorkItem(
 )
 
 /** 作家一覧の 1 行。workCount は役割を問わず関わった公開作品の数。lastNameSort は見出しの頭文字に使う。 */
-data class PersonItem(val id: Int, val lastName: String, val firstName: String, val lastNameSort: String, val workCount: Int) {
+data class PersonItem(
+    val id: Int,
+    val lastName: String,
+    val firstName: String,
+    val lastNameSort: String,
+    val workCount: Int,
+) {
     /** 表示用の名前。名が空の作家（一語の筆名や団体など）は姓の欄の名前だけになる。 */
     val name get() = "$lastName $firstName".trim()
 }
 
 // 読みの範囲の条件。:from が空なら平仮名で始まらない読み（YomiRange を参照）
-private const val WORK_IN_YOMI = "((:from != '' AND w.sortYomi >= :from AND w.sortYomi < :to) OR (:from = '' AND (w.sortYomi < 'ぁ' OR w.sortYomi >= 'ゟ')))"
-private const val PERSON_IN_YOMI = "((:from != '' AND p.lastNameSort >= :from AND p.lastNameSort < :to) OR (:from = '' AND (p.lastNameSort < 'ぁ' OR p.lastNameSort >= 'ゟ')))"
+private const val WORK_IN_YOMI = "((:from != '' AND w.sortYomi >= :from AND w.sortYomi < :to) OR " +
+    "(:from = '' AND (w.sortYomi < 'ぁ' OR w.sortYomi >= 'ゟ')))"
+private const val PERSON_IN_YOMI = "((:from != '' AND p.lastNameSort >= :from AND p.lastNameSort < :to) OR " +
+    "(:from = '' AND (p.lastNameSort < 'ぁ' OR p.lastNameSort >= 'ゟ')))"
 
 // 分野の条件。児童書だけのときは K つきの分類だけを見る
-private const val IN_NDC = "((:kidsOnly = 0 AND ' ' || w.ndc LIKE '% ' || :code || '%') OR ' ' || w.ndc LIKE '% K' || :code || '%')"
+private const val IN_NDC = "((:kidsOnly = 0 AND ' ' || w.ndc LIKE '% ' || :code || '%') OR " +
+    "' ' || w.ndc LIKE '% K' || :code || '%')"
 
 /** [WorkItem] を返すクエリの共通部分。後ろに WHERE や ORDER BY を足して使う。 */
 private const val WORK_ITEM = """
@@ -165,7 +174,9 @@ abstract class CatalogDao {
     abstract fun workItem(id: Int): Flow<WorkItem?>
 
     /** 作品に関わった作家。CSV の行の順（著者が先）に並べる。 */
-    @Query("SELECT p.id AS personId, p.lastName, p.firstName, c.role FROM credits c JOIN persons p ON p.id = c.personId WHERE c.workId = :workId ORDER BY c.rowid")
+    @Query(
+        "SELECT p.id AS personId, p.lastName, p.firstName, c.role FROM credits c JOIN persons p ON p.id = c.personId WHERE c.workId = :workId ORDER BY c.rowid",
+    )
     abstract fun creditsOf(workId: Int): Flow<List<CreditItem>>
 
     /** 残してある「作品について」。まだ取りに行っていなければ null。 */
@@ -180,10 +191,12 @@ abstract class CatalogDao {
     abstract fun worksByPerson(personId: Int): Flow<List<WorkItem>>
 
     /** 作家別で選んだ行（[KanaRow]）に姓の読みが入る作家と、それぞれの作品数。 */
-    @Query("""
+    @Query(
+        """
         SELECT p.id, p.lastName, p.firstName, p.lastNameSort,
             (SELECT COUNT(DISTINCT c.workId) FROM credits c WHERE c.personId = p.id) AS workCount
-        FROM persons p WHERE $PERSON_IN_YOMI ORDER BY p.lastNameSort, p.firstNameSort""")
+        FROM persons p WHERE $PERSON_IN_YOMI ORDER BY p.lastNameSort, p.firstNameSort""",
+    )
     abstract fun personsByYomi(from: String, to: String): Flow<List<PersonItem>>
 
     /** カタログは丸ごと取り直すので、差分更新はせず全件を入れ替える。 */
@@ -197,11 +210,19 @@ abstract class CatalogDao {
         insertCredits(catalog.credits)
     }
 
-    @Query("DELETE FROM works") protected abstract suspend fun deleteWorks()
-    @Query("DELETE FROM persons") protected abstract suspend fun deletePersons()
-    @Query("DELETE FROM credits") protected abstract suspend fun deleteCredits()
+    @Query("DELETE FROM works")
+    protected abstract suspend fun deleteWorks()
+
+    @Query("DELETE FROM persons")
+    protected abstract suspend fun deletePersons()
+
+    @Query("DELETE FROM credits")
+    protected abstract suspend fun deleteCredits()
+
     @Insert protected abstract suspend fun insertWorks(works: List<Work>)
+
     @Insert protected abstract suspend fun insertPersons(persons: List<Person>)
+
     @Insert protected abstract suspend fun insertCredits(credits: List<Credit>)
 }
 

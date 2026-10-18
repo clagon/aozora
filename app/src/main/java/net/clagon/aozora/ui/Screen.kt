@@ -67,17 +67,38 @@ fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back
     Column(Modifier.fillMaxSize().systemBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.Center) {
             IconButton(onClick = back, modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBackIos, contentDescription = "戻る", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBackIos,
+                    contentDescription = "戻る",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-            Text(screen.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 56.dp))
+            Text(
+                screen.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 56.dp),
+            )
         }
         val open = { work: WorkItem -> push(Screen.WorkDetail(work.id)) }
         when (screen) {
             Screen.NewWorks -> WorkList(remember { dao.newWorks(Int.MAX_VALUE) }, open)
+
             is Screen.Ndc -> NdcDivisionList(screen, catalog, push)
+
             is Screen.NdcWorks -> WorkList(remember(screen) { dao.worksByNdc(screen.code, screen.kidsOnly) }, open)
-            is Screen.KanaWorks -> WorkList(remember(screen) { kanaRange(screen.kana).let { dao.worksByYomi(it.from, it.to) } }, open)
+
+            is Screen.KanaWorks -> WorkList(
+                remember(screen) {
+                    kanaRange(screen.kana).let { dao.worksByYomi(it.from, it.to) }
+                },
+                open,
+            )
+
             is Screen.PersonWorks -> WorkList(remember(screen) { dao.worksByPerson(screen.personId) }, open)
+
             is Screen.WorkDetail -> WorkDetailScreen(screen.workId, catalog, push)
         }
     }

@@ -27,16 +27,48 @@ fun WorkList(works: Flow<List<WorkItem>>, onClick: (WorkItem) -> Unit) {
     val items by works.collectAsState(null)
     when {
         items == null -> {}
+
         items!!.isEmpty() -> Text("作品がありません", Modifier.padding(16.dp))
+
         else -> LazyColumn {
             items(items!!, key = { it.id }) { work ->
-                Row(Modifier.fillMaxWidth().clickable { onClick(work) }.padding(end = 16.dp, top = 8.dp, bottom = 8.dp, start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth().clickable {
+                        onClick(work)
+                    }.padding(end = 16.dp, top = 8.dp, bottom = 8.dp, start = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     BookCover(work, Modifier.width(64.dp), small = true)
                     Column(Modifier.padding(start = 16.dp).weight(1f)) {
-                        Text(work.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        if (work.subtitle.isNotBlank()) Text(work.subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(work.kanaType, color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodySmall)
-                        work.authors?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp)) }
+                        Text(
+                            work.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (work.subtitle.isNotBlank()) {
+                            Text(
+                                work.subtitle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Text(
+                            work.kanaType,
+                            color = MaterialTheme.colorScheme.outline,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        work.authors?.let {
+                            Text(
+                                it,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                        }
                     }
                 }
             }
