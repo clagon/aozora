@@ -1,15 +1,21 @@
 package net.clagon.aozora.library
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import net.clagon.aozora.catalog.CatalogDao
 import net.clagon.aozora.catalog.PersonItem
 import net.clagon.aozora.catalog.WorkItem
+import java.time.LocalDate
 
 /** 本棚や読書履歴に並べる 1 冊。開いたことがなければ openedAt は null、本棚になければ addedAt は null。 */
 data class Book(val work: WorkItem, val progress: Float, val openedAt: Long?, val addedAt: Long?)
+
+/** 1 日の読書時間。 */
+data class DayReading(val day: LocalDate, val millis: Long)
 
 /** 本棚の並べ替え。 */
 enum class ShelfOrder(val label: String) {
@@ -23,7 +29,20 @@ enum class ShelfOrder(val label: String) {
  * カタログから消えた作品は並べない。
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class Library(val dao: LibraryDao, private val catalog: CatalogDao) {
+class Library(val dao: LibraryDao, private val catalog: CatalogDao, private val scope: CoroutineScope) {
+    /**
+     * 今日の読書時間に millis を足す。リーダーを閉じるときにも呼ぶので、画面ではなくアプリのスコープで書く
+     * （画面のスコープは閉じると止まり、書き込みが消える）。
+     */
+    fun addReadingTime(millis: Long) {
+        val day = LocalDate.now().toString()
+        scope.launch { dao.addReadingTime(day, millis) }
+    }
+
+    /** today までの 7 日の読書時間。古い日から順に、読んでいない日も 0 で並べる。 */
+    fun lastSevenDays(today: LocalDate): Flow<List<DayReading>> =
+        dao.readingTimes(today.minusDays(6).toString()).map { lastSevenDays(today, it) }
+
     fun shelf(order: ShelfOrder): Flow<List<Book>> = dao.shelf().flatMapLatest { rows ->
         catalog.workItems(rows.map { it.workId }).map { works ->
             val byId = works.associateBy { it.id }
@@ -50,4 +69,10 @@ internal fun List<Book>.sortedFor(order: ShelfOrder): List<Book> = when (order) 
     ShelfOrder.Recent -> sortedByDescending { maxOf(it.openedAt ?: 0, it.addedAt ?: 0) }
     ShelfOrder.Added -> sortedByDescending { it.addedAt ?: 0 }
     ShelfOrder.Title -> sortedBy { it.work.sortYomi }
+}
+
+/** today までの 7 日を古い順に並べ、rows にない日は 0 にする。 */
+internal fun lastSevenDays(today: LocalDate, rows: List<ReadingTime>): List<DayReading> {
+    val byDay = rows.associate { it.day to it.millis }
+    return (6 downTo 0).map { today.minusDays(it.toLong()) }.map { DayReading(it, byDay[it.toString()] ?: 0) }
 }
