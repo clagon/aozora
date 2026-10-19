@@ -1,23 +1,15 @@
 package net.clagon.aozora.ui.search
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.ui.Screen
+import net.clagon.aozora.ui.components.TextTabs
 
 /** 探すタブの上部に並べる 4 つの探し方。並びは [SearchScreen] の分岐と対応する。 */
 private val SEARCH_TABS = listOf("分野別", "作家別", "作品別", "児童書")
@@ -28,40 +20,7 @@ fun SearchScreen(catalog: Catalog, push: (Screen) -> Unit) {
     var selected by rememberSaveable { mutableIntStateOf(0) }
     val counts by catalog.ndcCounts.collectAsState()
     Column {
-        PrimaryTabRow(
-            selectedTabIndex = selected,
-            containerColor = MaterialTheme.colorScheme.surface,
-            divider = {},
-            indicator = {
-                TabRowDefaults.PrimaryIndicator(
-                    Modifier.tabIndicatorOffset(selected, matchContentSize = true),
-                    width = 32.dp,
-                    shape = RoundedCornerShape(2.dp),
-                )
-            },
-        ) {
-            SEARCH_TABS.forEachIndexed { i, label ->
-                Tab(
-                    selected = i == selected,
-                    onClick = { selected = i },
-                    selectedContentColor = MaterialTheme.colorScheme.onSurface,
-                    unselectedContentColor = MaterialTheme.colorScheme.outline,
-                    text = {
-                        Text(
-                            label,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = if (i ==
-                                selected
-                            ) {
-                                FontWeight.Bold
-                            } else {
-                                FontWeight.Normal
-                            },
-                        )
-                    },
-                )
-            }
-        }
+        TextTabs(SEARCH_TABS, selected, { selected = it })
         when (selected) {
             0 -> NdcGrid(counts, kidsOnly = false, push)
             1 -> PersonBrowser(catalog.dao, push)

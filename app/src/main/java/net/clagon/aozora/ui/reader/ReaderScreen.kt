@@ -1,7 +1,6 @@
 package net.clagon.aozora.ui.reader
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.compose.animation.core.Animatable
@@ -61,7 +60,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.edit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import net.clagon.aozora.AozoraApp
@@ -87,19 +85,24 @@ private const val SWIPE_DP = 48
  * めくる操作はその上に重ねた透明な層で受ける。
  * - 左側のタップか右へのスワイプ（紙の本のようにページを右へ送る）で次のページ、右側のタップか左へのスワイプで前のページ。
  * - 中央のタップで、戻るボタン、ページのスライダーと前後の章への移動、目次と文字パネルを開くボタンを出し入れする。
- * 読んだ位置は読了率（0〜1）で作品ごとに残し、次に開いたときにその位置から始める。
+ * 読んだ位置は読了率（0〜1）で作品ごとに残し（library.db）、次に開いたときにその位置から始める。開くと読書履歴に入る。
  */
 // ponytail: 夜間・背景と、音量キーでのめくりはまだない
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
     val context = LocalContext.current
-    val texts = (context.applicationContext as AozoraApp).texts
+    val app = context.applicationContext as AozoraApp
+    val library = app.library.dao
     val work by remember(workId) { catalog.dao.work(workId) }.collectAsState(null)
+    // 読了率。残した位置を読むまでは -1（読む前に組み終わっても 0 ページ目を残さないように）
+    var progress by rememberSaveable { mutableFloatStateOf(-1f) }
     val text by produceState<Result<String>?>(null, work?.id) {
         val w = work ?: return@produceState
+        if (progress < 0) progress = library.progress(workId) ?: 0f
+        library.open(workId)
         value = try {
-            Result.success(texts.load(w))
+            Result.success(app.texts.load(w))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -107,8 +110,6 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
         }
     }
 
-    val positions = remember { context.getSharedPreferences(POSITIONS, Context.MODE_PRIVATE) }
-    var progress by rememberSaveable { mutableFloatStateOf(positions.getFloat(workId.toString(), 0f)) }
     // 段組みが終わるまでは 0
     var pages by remember { mutableIntStateOf(0) }
     val page = if (pages <= 1) 0 else (progress * (pages - 1)).roundToInt()
@@ -152,7 +153,7 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
     LaunchedEffect(page, pages) {
         if (pages == 0) return@LaunchedEffect
         webView.evaluateJavascript("reader.go($page)", null)
-        positions.edit { putFloat(workId.toString(), progress) }
+        library.saveProgress(workId, progress)
     }
 
     // めくる前のページの画像。めくったあと、これを画面の外へ滑らせる
@@ -319,7 +320,3 @@ private fun BarButton(icon: ImageVector, label: String, onClick: () -> Unit) {
         Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
     }
 }
-
-/** 読んだ位置（作品 ID → 読了率）を残す SharedPreferences の名前。 */
-// ponytail: 本棚・読書履歴の DB を作るときに、そちらへ移す
-private const val POSITIONS = "reading_positions"

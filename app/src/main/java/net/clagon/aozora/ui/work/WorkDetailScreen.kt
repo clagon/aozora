@@ -15,9 +15,14 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LibraryAddCheck
+import androidx.compose.material.icons.outlined.LibraryAdd
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,9 +30,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import net.clagon.aozora.AozoraApp
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.SourceBook
 import net.clagon.aozora.ui.Screen
@@ -45,6 +56,9 @@ fun WorkDetailScreen(workId: Int, catalog: Catalog, push: (Screen) -> Unit) {
     val credits by remember(workId) { catalog.dao.creditsOf(workId) }.collectAsState(emptyList())
     // 取りに行っている間と、取りに行けなかったときは null で、欄ごと出さない
     val about by produceState<String?>(null, work?.id) { value = work?.let { catalog.about(it) } }
+    val library = (LocalContext.current.applicationContext as AozoraApp).library.dao
+    val onShelf by remember(workId) { library.onShelf(workId) }.collectAsState(false)
+    val scope = rememberCoroutineScope()
     val w = work ?: return
     val i = item ?: return
 
@@ -90,23 +104,43 @@ fun WorkDetailScreen(workId: Int, catalog: Catalog, push: (Screen) -> Unit) {
             }
             Spacer(Modifier.height(24.dp))
         }
-        BottomBar { push(Screen.Reader(w.id)) }
+        BottomBar(
+            onShelf,
+            toggleShelf = {
+                scope.launch { if (onShelf) library.removeFromShelf(w.id) else library.addToShelf(w.id) }
+            },
+            read = { push(Screen.Reader(w.id)) },
+        )
     }
 }
 
-/** 下部のボタン。 */
-// ponytail: 「本棚に追加」は、本棚を作るときに左に足す
+/** 下部のボタン。左に本棚への追加（本棚にあれば押すと外す）、右に「今すぐ読む」。 */
 @Composable
-private fun BottomBar(read: () -> Unit) {
+private fun BottomBar(onShelf: Boolean, toggleShelf: () -> Unit, read: () -> Unit) {
     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceContainerHigh)
-    Button(
-        onClick = read,
-        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(
-            horizontal = 16.dp,
-            vertical = 10.dp,
-        ).height(52.dp),
+    Row(
+        Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("今すぐ読む", style = MaterialTheme.typography.titleMedium)
+        Column(
+            Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = toggleShelf)
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                if (onShelf) Icons.Filled.LibraryAddCheck else Icons.Outlined.LibraryAdd,
+                contentDescription = null,
+                tint = if (onShelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                if (onShelf) "本棚にあります" else "本棚に追加",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        Button(onClick = read, modifier = Modifier.padding(start = 12.dp).weight(1f).height(52.dp)) {
+            Text("今すぐ読む", style = MaterialTheme.typography.titleMedium)
+        }
     }
 }
 
