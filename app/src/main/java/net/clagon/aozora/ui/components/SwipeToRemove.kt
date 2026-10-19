@@ -21,6 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -38,7 +41,17 @@ private const val REMOVE_FRACTION = 0.4f
 fun SwipeToRemove(onRemove: () -> Unit, content: @Composable () -> Unit) {
     val offset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
-    Box {
+    // スワイプできない TalkBack などからも消せるよう、同じ操作を「削除」として出す
+    Box(
+        Modifier.semantics {
+            customActions = listOf(
+                CustomAccessibilityAction("削除") {
+                    onRemove()
+                    true
+                },
+            )
+        },
+    ) {
         Box(
             Modifier.matchParentSize().background(MaterialTheme.colorScheme.error).padding(end = 24.dp),
             contentAlignment = Alignment.CenterEnd,
