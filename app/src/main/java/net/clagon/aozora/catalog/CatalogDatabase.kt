@@ -99,10 +99,11 @@ data class CreditItem(val personId: Int, val lastName: String, val firstName: St
     val name get() = "$lastName $firstName".trim()
 }
 
-/** 一覧の 1 行。authors は役割が著者の作家を「、」でつないだもの。 */
+/** 一覧の 1 行。authors は役割が著者の作家を「、」でつないだもの。sortYomi は [Work.sortYomi]。 */
 data class WorkItem(
     val id: Int,
     val title: String,
+    val sortYomi: String,
     val subtitle: String,
     val firstAppearance: String,
     val ndc: String,
@@ -134,7 +135,7 @@ private const val IN_NDC = "((:kidsOnly = 0 AND ' ' || w.ndc LIKE '% ' || :code 
 
 /** [WorkItem] を返すクエリの共通部分。後ろに WHERE や ORDER BY を足して使う。 */
 private const val WORK_ITEM = """
-    SELECT w.id, w.title, w.subtitle, w.firstAppearance, w.ndc, w.kanaType,
+    SELECT w.id, w.title, w.sortYomi, w.subtitle, w.firstAppearance, w.ndc, w.kanaType,
         (SELECT GROUP_CONCAT(TRIM(p.lastName || ' ' || p.firstName), '、')
          FROM credits c JOIN persons p ON p.id = c.personId
          WHERE c.workId = w.id AND c.role = '著者') AS authors
@@ -176,6 +177,10 @@ abstract class CatalogDao {
     /** 作品詳細の表紙と見出しに使う、一覧と同じ形の 1 件。 */
     @Query("$WORK_ITEM WHERE w.id = :id")
     abstract fun workItem(id: Int): Flow<WorkItem?>
+
+    /** 本棚や読書履歴に並べる作品。並びは問わない。 */
+    @Query("$WORK_ITEM WHERE w.id IN (:ids)")
+    abstract fun workItems(ids: List<Int>): Flow<List<WorkItem>>
 
     /** 作品に関わった作家。CSV の行の順（著者が先）に並べる。 */
     @Query(

@@ -41,6 +41,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import net.clagon.aozora.AozoraApp
 import net.clagon.aozora.catalog.Catalog
+import net.clagon.aozora.library.Library
+import net.clagon.aozora.ui.bookshelf.BookshelfScreen
 import net.clagon.aozora.ui.components.CatalogStatus
 import net.clagon.aozora.ui.home.HomeScreen
 import net.clagon.aozora.ui.search.SearchScreen
@@ -60,7 +62,8 @@ private enum class Tab(val label: String, val icon: ImageVector, val selectedIco
 @Composable
 fun App() {
     // アプリ共通のデータを取得
-    val catalog = (LocalContext.current.applicationContext as AozoraApp).catalog
+    val app = LocalContext.current.applicationContext as AozoraApp
+    val catalog = app.catalog
 
     // タブや画面履歴などの状態を準備
     var tab by rememberSaveableEnum(Tab.Home)
@@ -96,7 +99,7 @@ fun App() {
                 if (top != null) {
                     StackedScreen(top, catalog, push) { back() }
                 } else {
-                    TabRoot(tab, catalog, push) { tab = it }
+                    TabRoot(tab, catalog, app.library, push) { tab = it }
                 }
             }
         }
@@ -105,7 +108,7 @@ fun App() {
 
 /** 下部タブと、選んだタブの画面。積んだ画面がないときだけ表示される。 */
 @Composable
-private fun TabRoot(tab: Tab, catalog: Catalog, push: (Screen) -> Unit, select: (Tab) -> Unit) {
+private fun TabRoot(tab: Tab, catalog: Catalog, library: Library, push: (Screen) -> Unit, select: (Tab) -> Unit) {
     Scaffold(
         bottomBar = {
             Column {
@@ -136,10 +139,10 @@ private fun TabRoot(tab: Tab, catalog: Catalog, push: (Screen) -> Unit, select: 
 
                 Tab.Search -> SearchScreen(catalog, push)
 
-                // ponytail: 本棚とその他の中身は未実装。それまではその他にカタログの状態を出しておく
-                Tab.Other -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CatalogStatus(catalog) }
+                Tab.Bookshelf -> BookshelfScreen(library, catalog.dao, push)
 
-                Tab.Bookshelf -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tab.label) }
+                // ponytail: その他の中身は未実装。それまではカタログの状態を出しておく
+                Tab.Other -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CatalogStatus(catalog) }
             }
         }
     }

@@ -5,6 +5,8 @@ import androidx.room.Room
 import kotlinx.coroutines.MainScope
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogDatabase
+import net.clagon.aozora.library.Library
+import net.clagon.aozora.library.LibraryDatabase
 import net.clagon.aozora.reader.Texts
 import java.io.File
 
@@ -23,6 +25,12 @@ class AozoraApp : Application() {
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
         Catalog(db.catalogDao(), scope)
+    }
+
+    /** 本棚・読書履歴・読書位置。 */
+    val library by lazy {
+        val db = Room.databaseBuilder(this, LibraryDatabase::class.java, "library.db").build()
+        Library(db.libraryDao(), catalog.dao)
     }
 
     /** 作品の本文の置き場。読んだ本文は files/texts に残る。 */
