@@ -2,7 +2,10 @@ package net.clagon.aozora.ui.reader
 
 import android.annotation.SuppressLint
 import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -71,6 +74,7 @@ import net.clagon.aozora.reader.nextChapter
 import net.clagon.aozora.reader.parseHeadings
 import net.clagon.aozora.reader.previousChapter
 import net.clagon.aozora.reader.readerHtml
+import java.net.URLConnection
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
 
@@ -126,6 +130,14 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
             setBackgroundColor(AndroidColor.WHITE)
             isVerticalScrollBarEnabled = false
             isHorizontalScrollBarEnabled = false
+            // 挿絵と外字の画像は端末に残したものを使い、なければ取ってきて残す（オフラインでも読めるように）
+            webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+                    val url = request.url.toString()
+                    val image = app.images.open(url) ?: return null
+                    return WebResourceResponse(URLConnection.guessContentTypeFromName(url), null, image)
+                }
+            }
             addJavascriptInterface(
                 object {
                     // JavaScript のスレッドから呼ばれるので、画面のスレッドに移してから状態を変える

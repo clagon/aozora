@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- カタログは公式 CSV から作り直せるうえ容量が大きいので、バックアップと端末間転送から外す。
-     本文は開けば取り直せるので、容量の限られたクラウドのバックアップからだけ外す -->
+     本文と画像は開けば取り直せるので、容量の限られたクラウドのバックアップからだけ外す -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="database" path="catalog.db" />
         <exclude domain="database" path="catalog.db-wal" />
         <exclude domain="database" path="catalog.db-shm" />
         <exclude domain="file" path="texts/" />
+        <exclude domain="file" path="images/" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="database" path="catalog.db" />
