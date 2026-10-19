@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import net.clagon.aozora.catalog.CatalogDao
@@ -55,7 +56,7 @@ fun BookActions(book: Book, catalog: CatalogDao, push: (Screen) -> Unit, onRemov
                 val only = credits.singleOrNull()
                 if (only != null) open(Screen.PersonDetail(only.personId, only.name)) else choosingPerson = true
             }
-            Action("削除") {
+            Action("削除", MaterialTheme.colorScheme.error) {
                 onRemove()
                 onDismiss()
             }
@@ -64,10 +65,11 @@ fun BookActions(book: Book, catalog: CatalogDao, push: (Screen) -> Unit, onRemov
     }
 }
 
+/** シートの 1 項目。取り消せない操作（削除）は color を赤にする。 */
 @Composable
-private fun Action(label: String, onClick: () -> Unit) {
+private fun Action(label: String, color: Color = Color.Unspecified, onClick: () -> Unit) {
     ListItem(
-        headlineContent = { Text(label) },
+        headlineContent = { Text(label, color = color) },
         modifier = Modifier.clickable(onClick = onClick),
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     )
