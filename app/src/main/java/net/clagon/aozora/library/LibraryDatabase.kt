@@ -7,6 +7,9 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
+import androidx.room.migration.Migration
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
 import kotlinx.coroutines.flow.Flow
 
 /** 本棚に入れた作品。addedAt は追加した日時（エポックミリ秒）。 */
@@ -19,6 +22,10 @@ data class ShelfEntry(@PrimaryKey val workId: Int, val addedAt: Long)
  */
 @Entity(tableName = "readings")
 data class Reading(@PrimaryKey val workId: Int, val progress: Float, val openedAt: Long, val inHistory: Boolean)
+
+/** お気に入り作家。addedAt は印をつけた日時（エポックミリ秒）。 */
+@Entity(tableName = "favorite_persons")
+data class FavoritePerson(@PrimaryKey val personId: Int, val addedAt: Long)
 
 /** 本棚の 1 冊と、開いたことがあればその読書位置。 */
 data class ShelfRow(val workId: Int, val addedAt: Long, val progress: Float?, val openedAt: Long?)
@@ -62,6 +69,19 @@ abstract class LibraryDao {
     @Query("UPDATE readings SET inHistory = 0 WHERE workId = :workId")
     abstract suspend fun removeFromHistory(workId: Int)
 
+    /** お気に入り作家の ID。 */
+    @Query("SELECT personId FROM favorite_persons")
+    abstract fun favoritePersons(): Flow<List<Int>>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM favorite_persons WHERE personId = :personId)")
+    abstract fun isFavorite(personId: Int): Flow<Boolean>
+
+    @Query("INSERT OR IGNORE INTO favorite_persons (personId, addedAt) VALUES (:personId, :now)")
+    abstract suspend fun addFavorite(personId: Int, now: Long = System.currentTimeMillis())
+
+    @Query("DELETE FROM favorite_persons WHERE personId = :personId")
+    abstract suspend fun removeFavorite(personId: Int)
+
     @Query(
         "INSERT OR IGNORE INTO readings (workId, progress, openedAt, inHistory) VALUES (:workId, 0, :now, 1)",
     )
@@ -75,8 +95,18 @@ abstract class LibraryDao {
  * 利用者のデータの DB（`library.db`）。カタログと違って作り直せないので、自動バックアップに含め、
  * 版を上げるときは移行を書く。
  */
-@Database(entities = [ShelfEntry::class, Reading::class], version = 1, exportSchema = false)
+@Database(entities = [ShelfEntry::class, Reading::class, FavoritePerson::class], version = 2, exportSchema = false)
 abstract class LibraryDatabase : RoomDatabase() {
     /** Room が実装を生成する。 */
     abstract fun libraryDao(): LibraryDao
+}
+
+/** 版 2 でお気に入り作家の表を足した。 */
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS favorite_persons (personId INTEGER NOT NULL, addedAt INTEGER NOT NULL, " +
+                "PRIMARY KEY(personId))",
+        )
+    }
 }

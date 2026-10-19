@@ -219,6 +219,15 @@ abstract class CatalogDao {
     )
     abstract fun personsByYomi(from: String, to: String): Flow<List<PersonItem>>
 
+    /** お気に入り作家の一覧に並べる作家。並びは作家別と同じ読みの順。 */
+    @Query(
+        """
+        SELECT p.id, p.lastName, p.firstName, p.lastNameSort,
+            (SELECT COUNT(DISTINCT c.workId) FROM credits c WHERE c.personId = p.id) AS workCount
+        FROM persons p WHERE p.id IN (:ids) ORDER BY p.lastNameSort, p.firstNameSort""",
+    )
+    abstract fun personItems(ids: List<Int>): Flow<List<PersonItem>>
+
     /** カタログは丸ごと取り直すので、差分更新はせず全件を入れ替える。 */
     @Transaction
     open suspend fun replaceAll(catalog: ParsedCatalog) {

@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import net.clagon.aozora.catalog.CatalogDao
+import net.clagon.aozora.catalog.PersonItem
 import net.clagon.aozora.catalog.WorkItem
 
 /** 本棚や読書履歴に並べる 1 冊。開いたことがなければ openedAt は null、本棚になければ addedAt は null。 */
@@ -30,6 +31,9 @@ class Library(val dao: LibraryDao, private val catalog: CatalogDao) {
                 .sortedFor(order)
         }
     }
+
+    /** お気に入り作家。カタログから消えた作家は並べない。 */
+    fun favoritePersons(): Flow<List<PersonItem>> = dao.favoritePersons().flatMapLatest { catalog.personItems(it) }
 
     fun history(): Flow<List<Book>> = dao.history().flatMapLatest { rows ->
         catalog.workItems(rows.map { it.workId }).map { works ->

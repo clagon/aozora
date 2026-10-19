@@ -43,8 +43,8 @@ import net.clagon.aozora.AozoraApp
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.library.Library
 import net.clagon.aozora.ui.bookshelf.BookshelfScreen
-import net.clagon.aozora.ui.components.CatalogStatus
 import net.clagon.aozora.ui.home.HomeScreen
+import net.clagon.aozora.ui.other.OtherScreen
 import net.clagon.aozora.ui.search.SearchScreen
 
 /** 画面を開く・戻るときのスライドの時間。 */
@@ -136,13 +136,9 @@ private fun TabRoot(tab: Tab, catalog: Catalog, library: Library, push: (Screen)
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (tab) {
                 Tab.Home -> HomeScreen(catalog, push)
-
                 Tab.Search -> SearchScreen(catalog, push)
-
                 Tab.Bookshelf -> BookshelfScreen(library, catalog.dao, push)
-
-                // ponytail: その他の中身は未実装。それまではカタログの状態を出しておく
-                Tab.Other -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CatalogStatus(catalog) }
+                Tab.Other -> OtherScreen(catalog, push)
             }
         }
     }
