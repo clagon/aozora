@@ -20,11 +20,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
@@ -36,18 +37,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,6 +63,7 @@ import net.clagon.aozora.library.Library
 import net.clagon.aozora.library.ShelfOrder
 import net.clagon.aozora.ui.Screen
 import net.clagon.aozora.ui.components.BookCover
+import net.clagon.aozora.ui.components.SwipeToRemove
 import net.clagon.aozora.ui.components.TextTabs
 import net.clagon.aozora.ui.components.WorkRow
 import java.time.Instant
@@ -85,7 +83,7 @@ private val ORDER_ICONS = mapOf(
 private val DATE = DateTimeFormatter.ofPattern("yyyy/MM/dd")
 
 /**
- * 本棚タブ。上部のタブで本棚と読書履歴を切り替える。作品を押すとリーダーで開く。
+ * 本棚タブ。上部のタブか左右のスワイプで本棚と読書履歴を切り替える。作品を押すとリーダーで開く。
  * 本棚は表示方式（グリッド／リスト）と並べ替えを右上のメニューで選び、長押しで作品詳細・作家詳細・削除を出す。
  * 読書履歴は最後に開いた順に並べ、左へスワイプすると履歴から外す。
  */
@@ -93,7 +91,8 @@ private val DATE = DateTimeFormatter.ofPattern("yyyy/MM/dd")
 @Composable
 fun BookshelfScreen(library: Library, catalog: CatalogDao, push: (Screen) -> Unit) {
     val prefs = LocalContext.current.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    var selected by rememberSaveable { mutableIntStateOf(0) }
+    val pager = rememberPagerState { 2 }
+    val onShelfTab = pager.currentPage == 0
     var list by remember { mutableStateOf(prefs.getBoolean("list", false)) }
     var order by remember {
         mutableStateOf(
@@ -121,13 +120,13 @@ fun BookshelfScreen(library: Library, catalog: CatalogDao, push: (Screen) -> Uni
 
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextTabs(listOf("本棚", "読書履歴"), selected, { selected = it }, Modifier.weight(1f))
+            TextTabs(listOf("本棚", "読書履歴"), pager, Modifier.weight(1f))
             Box {
-                IconButton(onClick = { menuShown = true }, enabled = selected == 0) {
+                IconButton(onClick = { menuShown = true }, enabled = onShelfTab) {
                     Icon(
                         Icons.Filled.MoreVert,
                         contentDescription = "メニュー",
-                        tint = if (selected == 0) MaterialTheme.colorScheme.onSurfaceVariant else Color.Transparent,
+                        tint = if (onShelfTab) MaterialTheme.colorScheme.onSurfaceVariant else Color.Transparent,
                     )
                 }
                 // 右端のボタンから出すので、画面の端に貼りつかないよう少し内側に寄せる
@@ -151,12 +150,14 @@ fun BookshelfScreen(library: Library, catalog: CatalogDao, push: (Screen) -> Uni
                 }
             }
         }
-        if (selected == 0) {
-            val books by remember(order) { library.shelf(order) }.collectAsState(null)
-            Shelf(books ?: return@Column, list, read) { pressed = it }
-        } else {
-            val books by remember { library.history() }.collectAsState(null)
-            History(books ?: return@Column, library, read)
+        HorizontalPager(pager, Modifier.fillMaxSize()) { page ->
+            if (page == 0) {
+                val books by remember(order) { library.shelf(order) }.collectAsState(null)
+                Shelf(books ?: return@HorizontalPager, list, read) { pressed = it }
+            } else {
+                val books by remember { library.history() }.collectAsState(null)
+                History(books ?: return@HorizontalPager, library, read)
+            }
         }
     }
     pressed?.let { book ->
@@ -205,18 +206,8 @@ private fun History(books: List<Book>, library: Library, read: (Book) -> Unit) {
     val scope = rememberCoroutineScope()
     LazyColumn(Modifier.fillMaxSize()) {
         items(books, key = { it.work.id }) { book ->
-            SwipeToDismissBox(
-                rememberSwipeToDismissBoxState(),
-                backgroundContent = {
-                    Box(
-                        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.error).padding(end = 24.dp),
-                        contentAlignment = Alignment.CenterEnd,
-                    ) { Icon(Icons.Filled.Delete, contentDescription = "削除", tint = Color.White) }
-                },
-                enableDismissFromStartToEnd = false,
-                onDismiss = { scope.launch { library.dao.removeFromHistory(book.work.id) } },
-            ) {
-                WorkRow(book.work, Modifier.background(MaterialTheme.colorScheme.surface).clickable { read(book) }) {
+            SwipeToRemove({ scope.launch { library.dao.removeFromHistory(book.work.id) } }) {
+                WorkRow(book.work, Modifier.clickable { read(book) }) {
                     BookStatus(book)
                 }
             }
