@@ -39,11 +39,9 @@ class Library(val dao: LibraryDao, private val catalog: CatalogDao, private val 
         scope.launch { dao.addReadingTime(day, millis) }
     }
 
-    /** 今日までの 7 日の読書時間。古い日から順に、読んでいない日も 0 で並べる。 */
-    fun lastSevenDays(): Flow<List<DayReading>> {
-        val today = LocalDate.now()
-        return dao.readingTimes(today.minusDays(6).toString()).map { lastSevenDays(today, it) }
-    }
+    /** today までの 7 日の読書時間。古い日から順に、読んでいない日も 0 で並べる。 */
+    fun lastSevenDays(today: LocalDate): Flow<List<DayReading>> =
+        dao.readingTimes(today.minusDays(6).toString()).map { lastSevenDays(today, it) }
 
     fun shelf(order: ShelfOrder): Flow<List<Book>> = dao.shelf().flatMapLatest { rows ->
         catalog.workItems(rows.map { it.workId }).map { works ->

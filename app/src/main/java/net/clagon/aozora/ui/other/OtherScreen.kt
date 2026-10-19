@@ -33,11 +33,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import net.clagon.aozora.AozoraApp
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogState
 import net.clagon.aozora.reader.ReaderSettings
 import net.clagon.aozora.ui.Screen
+import java.time.LocalDate
 
 /**
  * その他タブ。灰色の地に白い角丸のカードを並べる。
@@ -50,7 +52,13 @@ fun OtherScreen(catalog: Catalog, push: (Screen) -> Unit) {
     val library = (context.applicationContext as AozoraApp).library
     val state by catalog.state.collectAsState()
     val count by catalog.workCount.collectAsState(initial = null)
-    val days by remember { library.lastSevenDays() }.collectAsState(emptyList())
+    // 開いたまま日付が変わっても今日までの 7 日になるよう、前に出るたびに今日を確かめ直す
+    var today by remember { mutableStateOf(LocalDate.now()) }
+    LifecycleResumeEffect(Unit) {
+        today = LocalDate.now()
+        onPauseOrDispose {}
+    }
+    val days by remember(today) { library.lastSevenDays(today) }.collectAsState(emptyList())
     // その他タブを開くたびに読み直す（リーダーの文字パネルでも同じ設定を書き換えるため）
     var settings by remember { mutableStateOf(ReaderSettings.load(context)) }
     val change = { new: ReaderSettings ->
