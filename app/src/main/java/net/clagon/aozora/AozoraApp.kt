@@ -7,6 +7,7 @@ import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogDatabase
 import net.clagon.aozora.library.Library
 import net.clagon.aozora.library.LibraryDatabase
+import net.clagon.aozora.library.MIGRATION_1_2
 import net.clagon.aozora.reader.Texts
 import java.io.File
 
@@ -29,7 +30,9 @@ class AozoraApp : Application() {
 
     /** 本棚・読書履歴・読書位置。 */
     val library by lazy {
-        val db = Room.databaseBuilder(this, LibraryDatabase::class.java, "library.db").build()
+        val db = Room.databaseBuilder(this, LibraryDatabase::class.java, "library.db")
+            .addMigrations(MIGRATION_1_2)
+            .build()
         Library(db.libraryDao(), catalog.dao)
     }
 

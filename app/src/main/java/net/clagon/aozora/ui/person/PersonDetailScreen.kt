@@ -29,9 +29,8 @@ private const val ABOUT_COLLAPSED_LINES = 3
 
 /**
  * 作家詳細。読み・ローマ字・生没年・人物についての下に、役割を問わず関わった作品を並べる。
- * 作品を押すと open に渡す。
+ * 作品を押すと open に渡す。お気に入りの ☆ は見出しの右に置く（[FavoriteStar]）。
  */
-// ponytail: お気に入り作家の ☆ は、利用者データの DB を作るときに右上に足す
 @Composable
 fun PersonDetailScreen(personId: Int, catalog: Catalog, open: (WorkItem) -> Unit) {
     val person by remember(personId) { catalog.dao.person(personId) }.collectAsState(null)

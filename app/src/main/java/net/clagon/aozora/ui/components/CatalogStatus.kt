@@ -15,7 +15,7 @@ import net.clagon.aozora.catalog.CatalogState
 
 /**
  * カタログの取り込み状態・作品数と「カタログを更新」ボタン。
- * ホーム（取り込み中・失敗・空のときだけ）と、その他タブ（常に）に出す。
+ * ホームで、取り込み中・失敗・空のときだけ出す（その他タブはカードの行で出す）。
  */
 @Composable
 fun CatalogStatus(catalog: Catalog) {

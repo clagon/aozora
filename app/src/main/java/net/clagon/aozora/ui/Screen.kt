@@ -25,6 +25,8 @@ import net.clagon.aozora.catalog.NDC_CLASSES
 import net.clagon.aozora.catalog.WorkItem
 import net.clagon.aozora.catalog.kanaRange
 import net.clagon.aozora.ui.components.WorkList
+import net.clagon.aozora.ui.person.FavoritePersons
+import net.clagon.aozora.ui.person.FavoriteStar
 import net.clagon.aozora.ui.person.PersonDetailScreen
 import net.clagon.aozora.ui.reader.ReaderScreen
 import net.clagon.aozora.ui.search.NdcDivisionList
@@ -63,8 +65,13 @@ sealed interface Screen {
         override val title = ""
     }
 
-    /** 作家詳細。見出しは作家名。 */
+    /** 作家詳細。見出しは作家名で、右上に ☆ を置く。 */
     data class PersonDetail(val personId: Int, override val title: String) : Screen
+
+    /** その他タブから開く、お気に入り作家の一覧。 */
+    data object FavoritePersons : Screen {
+        override val title = "お気に入りの作家"
+    }
 }
 
 /** 積んだ画面の共通の枠。上部に戻るボタンと見出しを置き、中身を画面の種類で切り替える。 */
@@ -89,6 +96,9 @@ fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 56.dp),
             )
+            if (screen is Screen.PersonDetail) {
+                FavoriteStar(screen.personId, Modifier.align(Alignment.CenterEnd).padding(end = 4.dp))
+            }
         }
         val open = { work: WorkItem -> push(Screen.WorkDetail(work.id)) }
         when (screen) {
@@ -108,6 +118,8 @@ fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back
             is Screen.PersonDetail -> PersonDetailScreen(screen.personId, catalog, open)
 
             is Screen.WorkDetail -> WorkDetailScreen(screen.workId, catalog, push)
+
+            Screen.FavoritePersons -> FavoritePersons(push)
 
             is Screen.Reader -> {}
         }
