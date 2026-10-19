@@ -17,22 +17,24 @@ class Images(private val dir: File) {
     fun open(url: String): InputStream? {
         val file = fileFor(url) ?: return null
         if (!file.exists()) {
+            // 書きかけのファイルを画像として返さないよう、別名で書いてから置き換える。
+            // 同じ外字を同時に取りに行くこともあるので、別名は取りに行くごとに変える
+            val part = File("${file.path}.${UUID.randomUUID()}.part")
             val conn = connect(url)
             try {
                 if (conn.responseCode != HttpURLConnection.HTTP_OK) return null
-                // 書きかけのファイルを画像として返さないよう、別名で書いてから置き換える。
-                // 同じ外字を同時に取りに行くこともあるので、別名は取りに行くごとに変える
                 file.parentFile?.mkdirs()
-                val part = File("${file.path}.${UUID.randomUUID()}.part")
                 conn.inputStream.use { input -> part.outputStream().use { input.copyTo(it) } }
                 part.renameTo(file)
             } catch (_: Exception) {
                 return null
             } finally {
                 conn.disconnect()
+                // 途中で切れたり置き換えられなかったりした書きかけを残さない（置き換えられていれば、もうない）
+                part.delete()
             }
         }
-        return file.inputStream()
+        return file.takeIf { it.exists() }?.inputStream()
     }
 
     /** url を残す先。青空文庫のサイトの画像でなければ null。パスが dir の外を指すもの（`..` など）も null。 */
