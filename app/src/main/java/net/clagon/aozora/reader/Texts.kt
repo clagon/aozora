@@ -9,9 +9,8 @@ import java.nio.charset.Charset
 
 /**
  * 作品の本文（XHTML）の置き場。初めて開いたときに青空文庫から取ってきて dir に UTF-8 で残し、
- * 2 回目からは残したものを使う。本棚に入れたかどうかとは関係なく残す。
+ * 2 回目からは残したものを使う。本棚に入れたかどうかとは関係なく残す。挿絵と外字の画像は [Images] が残す。
  */
-// ponytail: 挿絵と外字の画像はまだ残さず、読むたびにサイトから読み込む。オフラインで読むときに残す
 class Texts(private val dir: File) {
     /** 本文を返す。取りに行けなければ例外を投げる（画面が理由を出す）。 */
     suspend fun load(work: Work): String = withContext(Dispatchers.IO) {

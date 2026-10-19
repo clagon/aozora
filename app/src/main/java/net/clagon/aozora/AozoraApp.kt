@@ -8,6 +8,7 @@ import net.clagon.aozora.catalog.CatalogDatabase
 import net.clagon.aozora.library.Library
 import net.clagon.aozora.library.LibraryDatabase
 import net.clagon.aozora.library.MIGRATION_1_2
+import net.clagon.aozora.reader.Images
 import net.clagon.aozora.reader.Texts
 import java.io.File
 
@@ -38,6 +39,9 @@ class AozoraApp : Application() {
 
     /** 作品の本文の置き場。読んだ本文は files/texts に残る。 */
     val texts by lazy { Texts(File(filesDir, "texts")) }
+
+    /** 挿絵と外字の画像の置き場。リーダーで読み込んだ画像は files/images に残る。 */
+    val images by lazy { Images(File(filesDir, "images")) }
 
     override fun onCreate() {
         super.onCreate()
