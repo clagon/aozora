@@ -133,7 +133,7 @@ private fun BottomBar(onShelf: Boolean, toggleShelf: () -> Unit, read: () -> Uni
                 tint = if (onShelf) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                if (onShelf) "本棚にあります" else "本棚に追加",
+                if (onShelf) "追加済み" else "本棚に追加",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.labelSmall,
             )

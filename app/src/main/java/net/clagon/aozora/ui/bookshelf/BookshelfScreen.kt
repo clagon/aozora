@@ -22,9 +22,14 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -35,6 +40,7 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,8 +53,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import kotlinx.coroutines.launch
@@ -66,6 +74,13 @@ import java.time.format.DateTimeFormatter
 
 /** 表示方式と並べ替えを残す SharedPreferences の名前。 */
 private const val PREFS = "bookshelf"
+
+/** 並べ替えのメニューの項目に添えるアイコン。 */
+private val ORDER_ICONS = mapOf(
+    ShelfOrder.Recent to Icons.Filled.Schedule,
+    ShelfOrder.Added to Icons.Filled.Event,
+    ShelfOrder.Title to Icons.Filled.SortByAlpha,
+)
 
 private val DATE = DateTimeFormatter.ofPattern("yyyy/MM/dd")
 
@@ -88,6 +103,18 @@ fun BookshelfScreen(library: Library, catalog: CatalogDao, push: (Screen) -> Uni
         )
     }
     var menuShown by remember { mutableStateOf(false) }
+    LaunchedEffect(list, order) { prefs.edit { putBoolean("list", list).putString("order", order.name) } }
+    // メニューの項目。選ぶとメニューを閉じる
+    @Composable
+    fun MenuChoice(label: String, icon: ImageVector, checked: Boolean, select: () -> Unit) = DropdownMenuItem(
+        text = { Text(label) },
+        onClick = {
+            select()
+            menuShown = false
+        },
+        leadingIcon = { Icon(icon, contentDescription = null) },
+        trailingIcon = { if (checked) Icon(Icons.Filled.Check, contentDescription = "選択中") },
+    )
     var pressed by remember { mutableStateOf<Book?>(null) }
     val read = { book: Book -> push(Screen.Reader(book.work.id)) }
     val scope = rememberCoroutineScope()
@@ -103,32 +130,23 @@ fun BookshelfScreen(library: Library, catalog: CatalogDao, push: (Screen) -> Uni
                         tint = if (selected == 0) MaterialTheme.colorScheme.onSurfaceVariant else Color.Transparent,
                     )
                 }
+                // 右端のボタンから出すので、画面の端に貼りつかないよう少し内側に寄せる
                 DropdownMenu(
                     menuShown,
                     onDismissRequest = { menuShown = false },
+                    offset = DpOffset((-12).dp, 0.dp),
                     containerColor = MaterialTheme.colorScheme.surface,
                 ) {
-                    DropdownMenuItem(
-                        text = { Text("表示方式：${if (list) "リスト" else "グリッド"}") },
-                        onClick = {
-                            list = !list
-                            prefs.edit { putBoolean("list", list) }
-                            menuShown = false
-                        },
-                    )
-                    HorizontalDivider()
+                    MenuHeader("表示方式")
+                    MenuChoice("グリッド", Icons.Filled.GridView, !list) { list = false }
+                    MenuChoice("リスト", Icons.AutoMirrored.Filled.ViewList, list) { list = true }
+                    HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                    MenuHeader("並べ替え")
                     ShelfOrder.entries.forEach {
-                        DropdownMenuItem(
-                            text = { Text(it.label) },
-                            onClick = {
-                                order = it
-                                prefs.edit { putString("order", it.name) }
-                                menuShown = false
-                            },
-                            trailingIcon = {
-                                if (it == order) Icon(Icons.Filled.Check, contentDescription = "選択中")
-                            },
-                        )
+                        MenuChoice(it.label, ORDER_ICONS.getValue(it), it == order) {
+                            order =
+                                it
+                        }
                     }
                 }
             }
@@ -236,6 +254,17 @@ private fun ProgressDots(progress: Float) {
             Box(Modifier.size(5.dp).clip(CircleShape).background(color))
         }
     }
+}
+
+/** メニューの中の見出し。 */
+@Composable
+private fun MenuHeader(label: String) {
+    Text(
+        label,
+        color = MaterialTheme.colorScheme.outline,
+        style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+    )
 }
 
 @Composable
