@@ -10,13 +10,13 @@ fun parseHeadings(text: String): List<Heading> = text.lines().mapNotNull { line 
 }
 
 /**
- * 「前の章」で移る先のページ。今のページより前で、いちばん近い見出しのページ。
- * 章の途中にいるならその章の頭に、章の頭にいるならひとつ前の章に移る。なければ null。
+ * 「前の章」で移る先のページ。今のページより前で、いちばん近い章の頭（大・中見出し）のページ。
+ * 章の途中にいるならその章の頭に、章の頭にいるならひとつ前の章に移る。小見出しは章を区切らないので飛ばす。なければ null。
  */
-fun List<Heading>.previousChapter(page: Int): Int? = lastOrNull { it.page < page }?.page
+fun List<Heading>.previousChapter(page: Int): Int? = lastOrNull { it.level < 2 && it.page < page }?.page
 
-/** 「次の章」で移る先のページ。今のページより後で、いちばん近い見出しのページ。なければ null。 */
-fun List<Heading>.nextChapter(page: Int): Int? = firstOrNull { it.page > page }?.page
+/** 「次の章」で移る先のページ。今のページより後で、いちばん近い章の頭（大・中見出し）のページ。なければ null。 */
+fun List<Heading>.nextChapter(page: Int): Int? = firstOrNull { it.level < 2 && it.page > page }?.page
 
 /** 今のページが属する見出し。最初の見出しより前なら null。 */
 fun List<Heading>.current(page: Int): Heading? = lastOrNull { it.page <= page }
