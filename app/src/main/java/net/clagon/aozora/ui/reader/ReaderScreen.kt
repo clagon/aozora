@@ -6,6 +6,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -61,14 +62,18 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import net.clagon.aozora.AozoraApp
+import net.clagon.aozora.MainActivity
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.reader.Heading
 import net.clagon.aozora.reader.ReaderSettings
+import net.clagon.aozora.reader.ReadingClock
 import net.clagon.aozora.reader.current
 import net.clagon.aozora.reader.nextChapter
 import net.clagon.aozora.reader.parseHeadings
@@ -88,10 +93,11 @@ private const val SWIPE_DP = 48
  * 本文を縦書きで 1 ページずつ読む画面。本文は WebView に段組みで描き（assets/reader）、
  * めくる操作はその上に重ねた透明な層で受ける。
  * - 左側のタップか右へのスワイプ（紙の本のようにページを右へ送る）で次のページ、右側のタップか左へのスワイプで前のページ。
+ * - 設定で、音量キー（下げるキーで次、上げるキーで前）でもめくれる。
  * - 中央のタップで、戻るボタン、ページのスライダーと前後の章への移動、目次と文字パネルを開くボタンを出し入れする。
  * 読んだ位置は読了率（0〜1）で作品ごとに残し（library.db）、次に開いたときにその位置から始める。開くと読書履歴に入る。
  */
-// ponytail: 夜間・背景と、音量キーでのめくりはまだない
+// ponytail: 夜間・背景はまだない
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
@@ -161,10 +167,23 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
         val page = readerHtml(html, css, readerSettings.cssVariables(), script)
         webView.loadDataWithBaseURL(work?.xhtmlUrl, page, "text/html", "utf-8", null)
     }
+    // 読書時間は、アプリが前に出ている間だけ数える
+    val clock = remember { ReadingClock(app.library::addReadingTime) }
+    LifecycleResumeEffect(Unit) {
+        clock.start()
+        onPauseOrDispose { clock.stop() }
+    }
+    // 読んでいる間は画面を消灯しない設定。画面を離れたら戻す
+    val view = LocalView.current
+    DisposableEffect(readerSettings.keepScreenOn) {
+        view.keepScreenOn = readerSettings.keepScreenOn
+        onDispose { view.keepScreenOn = false }
+    }
     // ページ数か読了率が変わったら、そのページを見せ、読んだ位置を残す
     LaunchedEffect(page, pages) {
         if (pages == 0) return@LaunchedEffect
         webView.evaluateJavascript("reader.go($page)", null)
+        clock.lap()
         library.saveProgress(workId, progress)
     }
 
@@ -190,6 +209,13 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
             slide.animateTo(if (delta > 0) 1f else -1f, tween(SLIDE_MILLIS))
             leaving = null
         }
+    }
+
+    // 音量キーでめくる設定なら、音量キーを受ける。画面を離れたら音量の変更に戻す
+    val activity = LocalActivity.current as? MainActivity
+    DisposableEffect(readerSettings.volumeKeys, activity) {
+        if (readerSettings.volumeKeys) activity?.volumeKeys = { turn(it) }
+        onDispose { activity?.volumeKeys = null }
     }
 
     Box(Modifier.fillMaxSize().background(Color.White).systemBarsPadding()) {

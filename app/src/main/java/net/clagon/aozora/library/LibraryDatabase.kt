@@ -27,6 +27,10 @@ data class Reading(@PrimaryKey val workId: Int, val progress: Float, val openedA
 @Entity(tableName = "favorite_persons")
 data class FavoritePerson(@PrimaryKey val personId: Int, val addedAt: Long)
 
+/** 日ごとの読書時間。day は端末の日付（`yyyy-MM-dd`）、millis はその日にリーダーを開いていた時間。 */
+@Entity(tableName = "reading_times")
+data class ReadingTime(@PrimaryKey val day: String, val millis: Long)
+
 /** 本棚の 1 冊と、開いたことがあればその読書位置。 */
 data class ShelfRow(val workId: Int, val addedAt: Long, val progress: Float?, val openedAt: Long?)
 
@@ -82,6 +86,23 @@ abstract class LibraryDao {
     @Query("DELETE FROM favorite_persons WHERE personId = :personId")
     abstract suspend fun removeFavorite(personId: Int)
 
+    /** since（`yyyy-MM-dd`）以降の読書時間。読んでいない日の行はない。 */
+    @Query("SELECT * FROM reading_times WHERE day >= :since")
+    abstract fun readingTimes(since: String): Flow<List<ReadingTime>>
+
+    /** day の読書時間に millis を足す。 */
+    @Transaction
+    open suspend fun addReadingTime(day: String, millis: Long) {
+        insertReadingTime(day)
+        increaseReadingTime(day, millis)
+    }
+
+    @Query("INSERT OR IGNORE INTO reading_times (day, millis) VALUES (:day, 0)")
+    protected abstract suspend fun insertReadingTime(day: String)
+
+    @Query("UPDATE reading_times SET millis = millis + :millis WHERE day = :day")
+    protected abstract suspend fun increaseReadingTime(day: String, millis: Long)
+
     @Query(
         "INSERT OR IGNORE INTO readings (workId, progress, openedAt, inHistory) VALUES (:workId, 0, :now, 1)",
     )
@@ -95,7 +116,11 @@ abstract class LibraryDao {
  * 利用者のデータの DB（`library.db`）。カタログと違って作り直せないので、自動バックアップに含め、
  * 版を上げるときは移行を書く。
  */
-@Database(entities = [ShelfEntry::class, Reading::class, FavoritePerson::class], version = 2, exportSchema = false)
+@Database(
+    entities = [ShelfEntry::class, Reading::class, FavoritePerson::class, ReadingTime::class],
+    version = 3,
+    exportSchema = false,
+)
 abstract class LibraryDatabase : RoomDatabase() {
     /** Room が実装を生成する。 */
     abstract fun libraryDao(): LibraryDao
@@ -107,6 +132,15 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         connection.execSQL(
             "CREATE TABLE IF NOT EXISTS favorite_persons (personId INTEGER NOT NULL, addedAt INTEGER NOT NULL, " +
                 "PRIMARY KEY(personId))",
+        )
+    }
+}
+
+/** 版 3 で日ごとの読書時間の表を足した。 */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS reading_times (day TEXT NOT NULL, millis INTEGER NOT NULL, PRIMARY KEY(day))",
         )
     }
 }

@@ -14,13 +14,17 @@ enum class Spacing(val label: String) {
 const val MIN_FONT_SIZE = 12
 const val MAX_FONT_SIZE = 32
 
-/** リーダーの文字パネルの設定。全作品で共通。 */
+/** リーダーの設定。文字パネルで変えるものと、その他タブで変えるもの（keepScreenOn・volumeKeys）。全作品で共通。 */
 data class ReaderSettings(
     val fontSize: Int = 18,
     val margin: Spacing = Spacing.Normal,
     val lineHeight: Spacing = Spacing.Normal,
     /** めくるときに前のページを滑らせるか。false ならすぐ切り替える。 */
     val slide: Boolean = true,
+    /** 読んでいる間は画面を消灯しない。 */
+    val keepScreenOn: Boolean = false,
+    /** 音量キーでページをめくる（下げるキーで次、上げるキーで前）。 */
+    val volumeKeys: Boolean = false,
 ) {
     /** 本文の CSS の変数（assets/reader/reader.css）に入れる値。 */
     fun cssVariables(): String {
@@ -51,6 +55,8 @@ data class ReaderSettings(
                 margin = spacing("margin", default.margin),
                 lineHeight = spacing("lineHeight", default.lineHeight),
                 slide = prefs.getBoolean("slide", default.slide),
+                keepScreenOn = prefs.getBoolean("keepScreenOn", default.keepScreenOn),
+                volumeKeys = prefs.getBoolean("volumeKeys", default.volumeKeys),
             )
         }
     }
@@ -61,5 +67,7 @@ data class ReaderSettings(
         putString("margin", margin.name)
         putString("lineHeight", lineHeight.name)
         putBoolean("slide", slide)
+        putBoolean("keepScreenOn", keepScreenOn)
+        putBoolean("volumeKeys", volumeKeys)
     }
 }
