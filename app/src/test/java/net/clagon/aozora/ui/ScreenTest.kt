@@ -1,17 +1,14 @@
 package net.clagon.aozora.ui
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
 
 class ScreenTest {
     @Test
-    fun screensSurviveSerialization() {
-        // アプリが止められたときは積んだ画面を Bundle に書き出し、戻ってきたときに読み直す
-        val stack = arrayListOf(
+    fun screensSurviveSaveAndRestore() {
+        // アプリが止められたときは積んだ画面を文字列にして保存し、戻ってきたときに読み直す
+        val stack = listOf(
             Screen.NewWorks,
             Screen.Ndc("91", kidsOnly = true),
             Screen.NdcWorks("913", kidsOnly = false),
@@ -23,7 +20,10 @@ class ScreenTest {
             Screen.Reader(127),
             Screen.FavoritePersons,
         )
-        val bytes = ByteArrayOutputStream().also { ObjectOutputStream(it).writeObject(stack) }.toByteArray()
-        assertEquals(stack, ObjectInputStream(ByteArrayInputStream(bytes)).readObject())
+        assertEquals(stack, stack.map { restoreScreen(it.saveKey()) })
+        // 前の版などで保存した知らない形は戻さない
+        assertNull(restoreScreen("Bookmark\t1"))
+        assertNull(restoreScreen("Reader\tx"))
+        assertNull(restoreScreen("Ndc\t91"))
     }
 }

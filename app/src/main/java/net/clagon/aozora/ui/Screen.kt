@@ -34,10 +34,9 @@ import net.clagon.aozora.ui.person.PersonDetailScreen
 import net.clagon.aozora.ui.reader.ReaderScreen
 import net.clagon.aozora.ui.search.NdcDivisionList
 import net.clagon.aozora.ui.work.WorkDetailScreen
-import java.io.Serializable
 
-/** タブの上に積む画面。戻る操作で 1 つずつ外す。アプリが止められても積み上げを戻せるよう、保存できる形にする。 */
-sealed interface Screen : Serializable {
+/** タブの上に積む画面。戻る操作で 1 つずつ外す。 */
+sealed interface Screen {
     /** 上部の見出しに出す文字。 */
     val title: String
 
@@ -91,6 +90,44 @@ sealed interface Screen : Serializable {
     data object FavoritePersons : Screen {
         override val title = "お気に入りの作家"
     }
+}
+
+/**
+ * アプリが止められても積んだ画面を開き直せるよう、画面を文字列にして保存する。種類の名前と値をタブでつなぐ。
+ * Java のシリアライズはクラスの形に縛られ、アプリを更新したあとに前の状態を読むと失敗するので使わない。
+ */
+fun Screen.saveKey(): String = when (this) {
+    Screen.NewWorks -> "NewWorks"
+    is Screen.Ndc -> "Ndc\t$code\t$kidsOnly"
+    is Screen.NdcWorks -> "NdcWorks\t$code\t$kidsOnly"
+    Screen.Ranking -> "Ranking"
+    Screen.Search -> "Search"
+    is Screen.KanaWorks -> "KanaWorks\t$kana"
+    is Screen.WorkDetail -> "WorkDetail\t$workId"
+    is Screen.Reader -> "Reader\t$workId"
+    is Screen.PersonDetail -> "PersonDetail\t$personId\t$title"
+    Screen.FavoritePersons -> "FavoritePersons"
+}
+
+/** [saveKey] で保存した文字列から画面を戻す。知らない形（前の版で保存したものなど）なら null。 */
+fun restoreScreen(key: String): Screen? {
+    // 作家名にはタブが入らないので、3 つ目以降はまとめて作家名として扱う
+    val f = key.split("\t", limit = 3)
+    return runCatching {
+        when (f[0]) {
+            "NewWorks" -> Screen.NewWorks
+            "Ndc" -> Screen.Ndc(f[1], f[2].toBooleanStrict())
+            "NdcWorks" -> Screen.NdcWorks(f[1], f[2].toBooleanStrict())
+            "Ranking" -> Screen.Ranking
+            "Search" -> Screen.Search
+            "KanaWorks" -> Screen.KanaWorks(f[1])
+            "WorkDetail" -> Screen.WorkDetail(f[1].toInt())
+            "Reader" -> Screen.Reader(f[1].toInt())
+            "PersonDetail" -> Screen.PersonDetail(f[1].toInt(), f[2])
+            "FavoritePersons" -> Screen.FavoritePersons
+            else -> null
+        }
+    }.getOrNull()
 }
 
 /** 積んだ画面の共通の枠。上部に戻るボタンと見出しを置き、中身を画面の種類で切り替える。 */
