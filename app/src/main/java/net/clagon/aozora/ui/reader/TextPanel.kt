@@ -20,11 +20,15 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import net.clagon.aozora.reader.MAX_FONT_SIZE
 import net.clagon.aozora.reader.MIN_FONT_SIZE
 import net.clagon.aozora.reader.ReaderSettings
@@ -38,6 +42,7 @@ import net.clagon.aozora.reader.Spacing
 @Composable
 fun TextPanel(settings: ReaderSettings, onChange: (ReaderSettings) -> Unit, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss, scrimColor = Color.Transparent) {
+        StatusBarIconsFor(settings)
         Column(
             Modifier.navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -104,5 +109,21 @@ private fun <T> RowScope.Choices(options: List<Pair<T, String>>, selected: T, on
                 icon = {},
             ) { Text(label) }
         }
+    }
+}
+
+/**
+ * 後ろの本文を暗くしないパネルで、上のステータスバーのアイコンの色を本文の地に合わせる。
+ * パネルは別の窓で、アイコンの色をアプリの配色で決めるため、パネルの中から窓に設定し直す。
+ * パネルを開いたまま背景を変えたときも追いかける。
+ */
+@Composable
+internal fun StatusBarIconsFor(settings: ReaderSettings) {
+    val view = LocalView.current
+    val light = !settings.palette.dark
+    LaunchedEffect(light) {
+        val sheet = generateSequence(view.parent) { it.parent }.filterIsInstance<DialogWindowProvider>().firstOrNull()
+        val window = sheet?.window ?: return@LaunchedEffect
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = light
     }
 }

@@ -29,7 +29,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,13 +61,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -81,7 +87,6 @@ import net.clagon.aozora.reader.previousChapter
 import net.clagon.aozora.reader.readerHtml
 import java.net.URLConnection
 import kotlin.math.roundToInt
-import android.graphics.Color as AndroidColor
 
 // ページをめくるときに、前のページが画面の外へ抜けるまでの時間
 private const val SLIDE_MILLIS = 250
@@ -126,6 +131,7 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
     var barsShown by remember { mutableStateOf(false) }
     var panelShown by remember { mutableStateOf(false) }
     var tocShown by remember { mutableStateOf(false) }
+    var backgroundShown by remember { mutableStateOf(false) }
     // 見出しとそのページ。段組みをやり直すたびに数え直す
     var headings by remember { mutableStateOf(emptyList<Heading>()) }
     var readerSettings by remember { mutableStateOf(ReaderSettings.load(context)) }
@@ -133,7 +139,6 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
     val webView = remember {
         WebView(context).apply {
             settings.javaScriptEnabled = true
-            setBackgroundColor(AndroidColor.WHITE)
             isVerticalScrollBarEnabled = false
             isHorizontalScrollBarEnabled = false
             // 挿絵と外字の画像は端末に残したものを使い、なければ取ってきて残す（オフラインでも読めるように）
@@ -211,20 +216,44 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
         }
     }
 
-    // 音量キーでめくる設定なら、音量キーを受ける。画面を離れたら音量の変更に戻す
+    // 文字パネル・背景パネル・夜間で設定を変えたら、残して本文に入れ直す。
+    // ページ数が変わっても読了率は変わらないので、組み直したあとは同じあたりのページを見せる
+    fun change(new: ReaderSettings) {
+        readerSettings = new
+        new.save(context)
+        webView.evaluateJavascript("reader.style('${new.cssVariables()}')", null)
+    }
+
     val activity = LocalActivity.current as? MainActivity
+    // 本文の地の色。WebView の地と、上下のシステムバーの裏もこの色にし、暗い地ならシステムバーのアイコンを明るくする
+    val paper = Color(readerSettings.palette.paper)
+    LaunchedEffect(paper) { webView.setBackgroundColor(paper.toArgb()) }
+    val appLight = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    DisposableEffect(readerSettings.palette.dark) {
+        val window = (activity ?: return@DisposableEffect onDispose {}).window
+        val bars = WindowCompat.getInsetsController(window, view)
+        bars.isAppearanceLightStatusBars = !readerSettings.palette.dark
+        bars.isAppearanceLightNavigationBars = !readerSettings.palette.dark
+        onDispose {
+            bars.isAppearanceLightStatusBars = appLight
+            bars.isAppearanceLightNavigationBars = appLight
+        }
+    }
+
+    // 音量キーでめくる設定なら、音量キーを受ける。画面を離れたら音量の変更に戻す
     DisposableEffect(readerSettings.volumeKeys, activity) {
         if (readerSettings.volumeKeys) activity?.volumeKeys = { turn(it) }
         onDispose { activity?.volumeKeys = null }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.White).systemBarsPadding()) {
+    Box(Modifier.fillMaxSize().background(paper).systemBarsPadding()) {
         when {
             text == null -> {}
 
             text!!.isFailure -> Text(
                 text!!.exceptionOrNull()?.message ?: "本文を読み込めませんでした",
                 Modifier.align(Alignment.Center).padding(24.dp),
+                color = Color(readerSettings.palette.ink),
             )
 
             else -> AndroidView(
@@ -239,10 +268,10 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
             Image(
                 it,
                 contentDescription = null,
-                // 写したページは背景が透けるので、下の新しいページが見えないよう白で塗る
+                // 写したページは背景が透けるので、下の新しいページが見えないよう本文の地の色で塗る
                 modifier = Modifier.fillMaxSize().graphicsLayer {
                     translationX = slide.value * size.width
-                }.background(Color.White),
+                }.background(paper),
             )
         }
         Box(
@@ -272,7 +301,8 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
         if (pages > 0) {
             Text(
                 "${page + 1}/$pages　${"%.2f".format(if (pages <= 1) 100f else page * 100f / (pages - 1))}%",
-                color = MaterialTheme.colorScheme.outline,
+                // 本文の地の上に出すので、アプリの配色ではなく本文の字の色を薄めて使う
+                color = Color(readerSettings.palette.ink).copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 8.dp),
             )
@@ -312,9 +342,14 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
                         TextButton(onClick = { next?.let(::jump) }, enabled = next != null) { Text("次の章") }
                     }
                 }
-                // ponytail: 夜間・背景は、作るときに目次と文字のあいだに足す
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                     BarButton(Icons.AutoMirrored.Filled.List, "目次") { tocShown = true }
+                    BarButton(
+                        if (readerSettings.night) Icons.Filled.DarkMode else Icons.Outlined.DarkMode,
+                        "夜間",
+                        on = readerSettings.night,
+                    ) { change(readerSettings.copy(night = !readerSettings.night)) }
+                    BarButton(Icons.Outlined.Palette, "背景") { backgroundShown = true }
                     BarButton(Icons.Filled.TextFields, "文字") { panelShown = true }
                 }
             }
@@ -332,29 +367,24 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
         )
     }
     if (panelShown) {
-        TextPanel(
-            readerSettings,
-            onChange = {
-                readerSettings = it
-                it.save(context)
-                // ページ数が変わっても読了率は変わらないので、組み直したあとは同じあたりのページを見せる
-                webView.evaluateJavascript("reader.style('${it.cssVariables()}')", null)
-            },
-            onDismiss = { panelShown = false },
-        )
+        TextPanel(readerSettings, onChange = ::change, onDismiss = { panelShown = false })
+    }
+    if (backgroundShown) {
+        BackgroundPanel(readerSettings, onChange = ::change, onDismiss = { backgroundShown = false })
     }
 }
 
-/** 下部のバーに並べる、アイコンと名前のボタン。 */
+/** 下部のバーに並べる、アイコンと名前のボタン。on なら（夜間がオンのときなど）青くする。 */
 @Composable
-private fun BarButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+private fun BarButton(icon: ImageVector, label: String, on: Boolean = false, onClick: () -> Unit) {
+    val color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
     Column(
         Modifier.clip(
             RoundedCornerShape(8.dp),
         ).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+        Icon(icon, contentDescription = null, tint = color)
+        Text(label, color = color, style = MaterialTheme.typography.labelSmall)
     }
 }
