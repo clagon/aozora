@@ -41,8 +41,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import net.clagon.aozora.catalog.CatalogDao
+import net.clagon.aozora.catalog.PersonItem
 import net.clagon.aozora.catalog.searchLike
 import net.clagon.aozora.ui.Screen
 import net.clagon.aozora.ui.components.WorkRow
@@ -57,12 +59,10 @@ import net.clagon.aozora.ui.search.personItems
 fun KeywordSearch(dao: CatalogDao, push: (Screen) -> Unit, back: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val key = searchLike(query)
-    // 何も打っていないときは全件に当たるので、DB を引かずに空にしておく
-    val persons by remember(key) {
-        if (key.isEmpty()) flowOf(emptyList()) else dao.searchPersons(key)
-    }.collectAsState(null)
-    val works by remember(key) {
-        if (key.isEmpty()) flowOf(emptyList()) else dao.searchWorks(key)
+    // 作家と作品は、いつも同じ検索語の結果をそろえて出す。打ち変えている間は、新しい結果が出るまで前の結果を出しておく
+    // （毎回消すと 1 文字ごとにちらつく）。何も打っていないときは全件に当たるので、DB を引かない
+    val found by remember(key) {
+        if (key.isEmpty()) flowOf(null) else combine(dao.searchPersons(key), dao.searchWorks(key), ::Pair)
     }.collectAsState(null)
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = remember { FocusRequester() }
@@ -109,10 +109,9 @@ fun KeywordSearch(dao: CatalogDao, push: (Screen) -> Unit, back: () -> Unit) {
                 ),
             )
         }
-        val foundPersons = persons.orEmpty()
-        val foundWorks = works.orEmpty()
+        val (foundPersons, foundWorks) = found ?: (emptyList<PersonItem>() to emptyList())
         when {
-            key.isEmpty() || persons == null || works == null -> {}
+            key.isEmpty() || found == null -> {}
 
             foundPersons.isEmpty() && foundWorks.isEmpty() -> Text(
                 "見つかりませんでした",
