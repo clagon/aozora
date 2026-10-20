@@ -124,7 +124,7 @@ data class CreditItem(val personId: Int, val lastName: String, val firstName: St
     val name get() = "$lastName $firstName".trim()
 }
 
-/** 一覧の 1 行。authors は役割が著者の作家を「、」でつないだもの。sortYomi は [Work.sortYomi]。 */
+/** 一覧の 1 行。authors は役割が著者の作家を「、」でつないだもの。sortYomi と publishedOn は [Work] と同じ。 */
 data class WorkItem(
     val id: Int,
     val title: String,
@@ -134,6 +134,7 @@ data class WorkItem(
     val ndc: String,
     val kanaType: String,
     val authors: String?,
+    val publishedOn: String = "",
 )
 
 /** 作家一覧の 1 行。workCount は役割を問わず関わった公開作品の数。lastNameSort は見出しの頭文字に使う。 */
@@ -160,7 +161,7 @@ private const val IN_NDC = "((:kidsOnly = 0 AND ' ' || w.ndc LIKE '% ' || :code 
 
 /** [WorkItem] を返すクエリの共通部分。後ろに WHERE や ORDER BY を足して使う。 */
 private const val WORK_ITEM = """
-    SELECT w.id, w.title, w.sortYomi, w.subtitle, w.firstAppearance, w.ndc, w.kanaType,
+    SELECT w.id, w.title, w.sortYomi, w.subtitle, w.firstAppearance, w.ndc, w.kanaType, w.publishedOn,
         (SELECT GROUP_CONCAT(TRIM(p.lastName || ' ' || p.firstName), '、')
          FROM credits c JOIN persons p ON p.id = c.personId
          WHERE c.workId = w.id AND c.role = '著者') AS authors
@@ -176,9 +177,17 @@ abstract class CatalogDao {
     @Query("SELECT COUNT(*) FROM works")
     abstract fun workCount(): Flow<Int>
 
-    /** 新着作品。ホームは数件だけ、新着の一覧は全件（[Int.MAX_VALUE]）を取る。 */
+    /** ホームに並べる新着作品。新しいものから limit 件。 */
     @Query("$WORK_ITEM ORDER BY w.publishedOn DESC, w.id DESC LIMIT :limit")
     abstract fun newWorks(limit: Int): Flow<List<WorkItem>>
+
+    /** 新着の一覧で選べる公開年（"2026" の形）。新しい年から。 */
+    @Query("SELECT DISTINCT substr(publishedOn, 1, 4) FROM works WHERE publishedOn != '' ORDER BY 1 DESC")
+    abstract fun publishedYears(): Flow<List<String>>
+
+    /** year 年に公開した作品。新しいものから。 */
+    @Query("$WORK_ITEM WHERE w.publishedOn LIKE :year || '-%' ORDER BY w.publishedOn DESC, w.id DESC")
+    abstract fun newWorksIn(year: String): Flow<List<WorkItem>>
 
     /**
      * code は NDC の上 1〜3 桁（例: "9"、"91"）。ndc は "NDC 913" や "NDC 756 914" の形。

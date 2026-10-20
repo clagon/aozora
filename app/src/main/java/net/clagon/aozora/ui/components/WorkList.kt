@@ -26,12 +26,14 @@ import net.clagon.aozora.catalog.WorkItem
 /**
  * 作品の一覧。各行は小さな表紙・作品名・文字遣い種別・著者で、押すと onClick に作品を渡す。
  * header は一覧の先頭に置き、一覧と一緒にスクロールする。rank を渡すと、各行の左にその作品の順位を出す。
+ * extra は各行の著者の下に足す行（[WorkRow] の extra）。
  */
 @Composable
 fun WorkList(
     works: Flow<List<WorkItem>>,
     onClick: (WorkItem) -> Unit,
     rank: ((WorkItem) -> Int?)? = null,
+    extra: @Composable ColumnScope.(WorkItem) -> Unit = {},
     header: @Composable () -> Unit = {},
 ) {
     val items by works.collectAsState(null)
@@ -46,7 +48,7 @@ fun WorkList(
         else -> LazyColumn {
             item { header() }
             items(items!!, key = { it.id }) { work ->
-                WorkRow(work, Modifier.clickable { onClick(work) }, rank = rank?.invoke(work))
+                WorkRow(work, Modifier.clickable { onClick(work) }, rank = rank?.invoke(work)) { extra(work) }
             }
         }
     }

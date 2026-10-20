@@ -31,6 +31,8 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SortByAlpha
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -38,6 +40,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,7 +52,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
@@ -85,9 +87,8 @@ private val DATE = DateTimeFormatter.ofPattern("yyyy/MM/dd")
 /**
  * 本棚タブ。上部のタブか左右のスワイプで本棚と読書履歴を切り替える。作品を押すとリーダーで開く。
  * 本棚は表示方式（グリッド／リスト）と並べ替えを右上のメニューで選び、長押しで作品詳細・作家詳細・削除を出す。
- * 読書履歴は最後に開いた順に並べ、左へスワイプすると履歴から外す。
+ * 読書履歴は最後に開いた順に並べ、左へスワイプすると履歴から外す。右上のごみ箱で、確かめてからすべて外す。
  */
-// ponytail: 読書履歴の全件削除（右上のごみ箱）はまだない
 @Composable
 fun BookshelfScreen(library: Library, catalog: CatalogDao, push: (Screen) -> Unit) {
     val prefs = LocalContext.current.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -102,6 +103,7 @@ fun BookshelfScreen(library: Library, catalog: CatalogDao, push: (Screen) -> Uni
         )
     }
     var menuShown by remember { mutableStateOf(false) }
+    var clearAsked by remember { mutableStateOf(false) }
     LaunchedEffect(list, order) { prefs.edit { putBoolean("list", list).putString("order", order.name) } }
     // メニューの項目。選ぶとメニューを閉じる
     @Composable
@@ -121,13 +123,24 @@ fun BookshelfScreen(library: Library, catalog: CatalogDao, push: (Screen) -> Uni
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextTabs(listOf("本棚", "読書履歴"), pager, Modifier.weight(1f))
-            Box {
-                IconButton(onClick = { menuShown = true }, enabled = onShelfTab) {
+            if (!onShelfTab) {
+                IconButton(onClick = { clearAsked = true }) {
                     Icon(
-                        Icons.Filled.MoreVert,
-                        contentDescription = "メニュー",
-                        tint = if (onShelfTab) MaterialTheme.colorScheme.onSurfaceVariant else Color.Transparent,
+                        Icons.Outlined.Delete,
+                        contentDescription = "読書履歴をすべて消す",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+            Box {
+                if (onShelfTab) {
+                    IconButton(onClick = { menuShown = true }) {
+                        Icon(
+                            Icons.Filled.MoreVert,
+                            contentDescription = "メニュー",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 // 右端のボタンから出すので、画面の端に貼りつかないよう少し内側に寄せる
                 DropdownMenu(
@@ -159,6 +172,20 @@ fun BookshelfScreen(library: Library, catalog: CatalogDao, push: (Screen) -> Uni
                 History(books ?: return@HorizontalPager, library, read)
             }
         }
+    }
+    if (clearAsked) {
+        AlertDialog(
+            onDismissRequest = { clearAsked = false },
+            title = { Text("読書履歴をすべて消しますか") },
+            text = { Text("本棚と、作品ごとの読んだ位置はそのまま残ります。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch { library.dao.clearHistory() }
+                    clearAsked = false
+                }) { Text("消す") }
+            },
+            dismissButton = { TextButton(onClick = { clearAsked = false }) { Text("やめる") } },
+        )
     }
     pressed?.let { book ->
         BookActions(
