@@ -34,9 +34,10 @@ import net.clagon.aozora.ui.person.PersonDetailScreen
 import net.clagon.aozora.ui.reader.ReaderScreen
 import net.clagon.aozora.ui.search.NdcDivisionList
 import net.clagon.aozora.ui.work.WorkDetailScreen
+import java.io.Serializable
 
-/** タブの上に積む画面。戻る操作で 1 つずつ外す。 */
-sealed interface Screen {
+/** タブの上に積む画面。戻る操作で 1 つずつ外す。アプリが止められても積み上げを戻せるよう、保存できる形にする。 */
+sealed interface Screen : Serializable {
     /** 上部の見出しに出す文字。 */
     val title: String
 
