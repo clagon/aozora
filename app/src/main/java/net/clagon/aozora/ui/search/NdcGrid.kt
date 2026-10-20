@@ -66,7 +66,7 @@ fun NdcGrid(counts: NdcCounts?, kidsOnly: Boolean, push: (Screen) -> Unit) {
     ) {
         items(NDC_CLASSES) {
             NdcCard(it.digit, it.name, counts.of(it.digit.toString(), kidsOnly)) {
-                push(Screen.Ndc(it.digit, kidsOnly))
+                push(Screen.Ndc(it.digit.toString(), kidsOnly))
             }
         }
     }

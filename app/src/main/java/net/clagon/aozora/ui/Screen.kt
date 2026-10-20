@@ -21,9 +21,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import net.clagon.aozora.catalog.Catalog
-import net.clagon.aozora.catalog.NDC_CLASSES
 import net.clagon.aozora.catalog.WorkItem
 import net.clagon.aozora.catalog.kanaRange
+import net.clagon.aozora.catalog.ndcName
 import net.clagon.aozora.ui.components.WorkList
 import net.clagon.aozora.ui.person.FavoritePersons
 import net.clagon.aozora.ui.person.FavoriteStar
@@ -42,13 +42,18 @@ sealed interface Screen {
         override val title = "新着作品"
     }
 
-    /** 分野の第 2 次区分の一覧。kidsOnly なら児童書だけを数える。 */
-    data class Ndc(val digit: Int, val kidsOnly: Boolean) : Screen {
-        override val title get() = NDC_CLASSES[digit].name
+    /**
+     * 分野の 1 つ下の区分の一覧。code が 1 桁なら第 2 次区分、2 桁なら第 3 次区分を並べる。kidsOnly なら児童書だけを数える。
+     * 見出しは「文学 > 日本文学」のように上の区分からたどった名前。
+     */
+    data class Ndc(val code: String, val kidsOnly: Boolean) : Screen {
+        override val title get() = code.indices.joinToString(" > ") { ndcName(code.take(it + 1)) }
     }
 
-    /** 第 2 次区分（code は 2 桁）に属する作品の一覧。 */
-    data class NdcWorks(val code: String, override val title: String, val kidsOnly: Boolean) : Screen
+    /** 第 3 次区分（code は 3 桁）に属する作品の一覧。見出しは「日本文学 > 小説・物語」のように第 2 次区分から出す。 */
+    data class NdcWorks(val code: String, val kidsOnly: Boolean) : Screen {
+        override val title get() = listOf(ndcName(code.take(2)), ndcName(code)).distinct().joinToString(" > ")
+    }
 
     /** 作品別で選んだ 1 文字で始まる作品の一覧。 */
     data class KanaWorks(val kana: String) : Screen {
