@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,19 +35,21 @@ import androidx.compose.ui.unit.dp
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogState
 import net.clagon.aozora.catalog.WorkItem
+import net.clagon.aozora.catalog.ranking
 import net.clagon.aozora.ui.Screen
 import net.clagon.aozora.ui.components.BookCover
 import net.clagon.aozora.ui.components.CatalogStatus
 import net.clagon.aozora.ui.components.NdcTagRow
 
 // 1 件目を表紙と詳細で大きく出し、続く 3 件を表紙だけで並べる
-private const val HOME_NEW_WORKS = 4
+private const val HOME_WORKS = 4
 
-/** ホームタブ。検索の入口と新着作品を出す。 */
+/** ホームタブ。検索の入口と、新着作品・ランキングを数件ずつ出す。 */
 @Composable
 fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
     val state by catalog.state.collectAsState()
-    val works by remember { catalog.dao.newWorks(HOME_NEW_WORKS) }.collectAsState(null)
+    val works by remember { catalog.dao.newWorks(HOME_WORKS) }.collectAsState(null)
+    val ranking by remember { catalog.dao.ranking(HOME_WORKS) }.collectAsState(null)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         SearchBarEntry { push(Screen.Search) }
         if (state != CatalogState.Ready || works?.isEmpty() == true) {
@@ -54,6 +57,9 @@ fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
         }
         SectionHeader("新着作品") { push(Screen.NewWorks) }
         works?.takeIf { it.isNotEmpty() }?.let { CoverShowcase(it) { work -> push(Screen.WorkDetail(work.id)) } }
+        SectionHeader("ランキング") { push(Screen.Ranking) }
+        ranking?.takeIf { it.isNotEmpty() }?.let { CoverShowcase(it) { work -> push(Screen.WorkDetail(work.id)) } }
+        Spacer(Modifier.height(24.dp))
     }
 }
 

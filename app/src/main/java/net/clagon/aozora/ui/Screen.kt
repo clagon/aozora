@@ -24,6 +24,8 @@ import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.WorkItem
 import net.clagon.aozora.catalog.kanaRange
 import net.clagon.aozora.catalog.ndcName
+import net.clagon.aozora.catalog.rankOf
+import net.clagon.aozora.catalog.ranking
 import net.clagon.aozora.ui.components.WorkList
 import net.clagon.aozora.ui.home.KeywordSearch
 import net.clagon.aozora.ui.person.FavoritePersons
@@ -54,6 +56,11 @@ sealed interface Screen {
     /** 第 3 次区分（code は 3 桁）に属する作品の一覧。見出しは「日本文学 > 小説・物語」のように第 2 次区分から出す。 */
     data class NdcWorks(val code: String, val kidsOnly: Boolean) : Screen {
         override val title get() = listOf(ndcName(code.take(2)), ndcName(code)).distinct().joinToString(" > ")
+    }
+
+    /** ホームの「もっと見る」で開く、ランキングの全件。行の左に順位を出す。 */
+    data object Ranking : Screen {
+        override val title = "ランキング（2022 年）"
     }
 
     /** ホームの検索窓から開く検索。見出しの代わりに検索窓を置く。 */
@@ -115,6 +122,8 @@ fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back
         val open = { work: WorkItem -> push(Screen.WorkDetail(work.id)) }
         when (screen) {
             Screen.NewWorks -> WorkList(remember { dao.newWorks(Int.MAX_VALUE) }, open)
+
+            Screen.Ranking -> WorkList(remember { dao.ranking() }, open, rank = { rankOf(it.id) })
 
             is Screen.Ndc -> NdcDivisionList(screen, catalog, push)
 
