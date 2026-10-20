@@ -301,7 +301,8 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
         if (pages > 0) {
             Text(
                 "${page + 1}/$pages　${"%.2f".format(if (pages <= 1) 100f else page * 100f / (pages - 1))}%",
-                color = MaterialTheme.colorScheme.outline,
+                // 本文の地の上に出すので、アプリの配色ではなく本文の字の色を薄めて使う
+                color = Color(readerSettings.palette.ink).copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 8.dp),
             )
