@@ -30,9 +30,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -67,8 +70,11 @@ fun App() {
 
     // タブや画面履歴などの状態を準備
     var tab by rememberSaveableEnum(Tab.Home)
-    // ponytail: 画面の積み上げは回転などで作り直されると消える。困ったら Navigation を入れる
-    val stack = remember { mutableStateListOf<Screen>() }
+    // 積んだ画面は、裏にいる間にアプリが止められても、戻ってきたときに開き直す。
+    // 1 つでも戻せない画面があれば、途中から開くと戻る先がおかしくなるので、タブの画面から始める
+    val stack = rememberSaveable(saver = stackSaver) {
+        mutableStateListOf<Screen>()
+    }
     // 画面を離れて戻ってきたときに、タブの選択やスクロール位置を残しておく
     val saveableState = rememberSaveableStateHolder()
     val push: (Screen) -> Unit = { stack += it }
@@ -109,6 +115,12 @@ fun App() {
         }
     }
 }
+
+/** 積んだ画面を文字列のリストにして保存する。 */
+private val stackSaver = listSaver<SnapshotStateList<Screen>, String>(
+    save = { stack -> stack.map { it.saveKey() } },
+    restore = { keys -> keys.map { restoreScreen(it) ?: return@listSaver null }.toMutableStateList() },
+)
 
 /** 積んだ画面の一番上の状態を残す鍵。何も積んでいなければタブの画面の鍵。 */
 private fun stateKey(screens: List<Screen>) = screens.lastOrNull()?.let { "${screens.size}:$it" } ?: "root"
