@@ -2,7 +2,7 @@
  * 本文を縦書きにし、1 画面ずつの段に分ける。縦書きでは段は上から下へ並ぶので、
  * 1 段の高さを画面の高さにそろえ、縦にスクロールして 1 ページずつ見せる（reader.js）。
  * --margin-x は左右（行の並ぶ方向）、--margin-y は上下（文字の並ぶ方向）の余白。
- * 文字サイズ・行間・余白は文字パネルの設定で、アプリが別の style（#reader-vars）で上書きする（ReaderSettings）。
+ * 文字サイズ・行間・余白は文字パネル、配色（--paper・--ink）は背景と夜間の設定で、アプリが別の style（#reader-vars）で上書きする（ReaderSettings）。
  * --page-width と --page-height は画面の大きさで、reader.js が入れる（WebView の大きさが決まる前は vh が 0 になるため）。
  * 大きさが入るまでは本文を組まない（html に paged がつくまで隠す）。大きさのない段組みは 1 段 1 文字になり、
  * 長い作品ではそれを組むだけで止まってしまう。
@@ -14,6 +14,9 @@
     --margin-y: 40px;
     --page-width: 100vw;
     --page-height: 100vh;
+    --paper: #fff;
+    --ink: #222;
+    --gaiji-filter: none;
 }
 
 html:not(.paged) body {
@@ -23,6 +26,7 @@ html:not(.paged) body {
 html {
     writing-mode: vertical-rl;
     overflow: hidden;
+    background: var(--paper);
 }
 
 body {
@@ -37,8 +41,8 @@ body {
     font-family: serif;
     font-size: var(--font-size);
     line-height: var(--line-height);
-    color: #222;
-    background: #fff;
+    color: var(--ink);
+    background: var(--paper);
     -webkit-text-size-adjust: none;
 }
 
@@ -73,10 +77,11 @@ rt {
     text-emphasis-style: open circle;
 }
 
-/* 外字の画像は 1 文字分にする */
+/* 外字の画像は 1 文字分にする。黒い字の画像なので、暗い配色では反転して読めるようにする */
 img.gaiji {
     width: 1em;
     height: 1em;
+    filter: var(--gaiji-filter);
 }
 
 /* 挿絵は 1 ページに収める */

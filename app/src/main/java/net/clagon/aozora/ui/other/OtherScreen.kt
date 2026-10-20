@@ -3,6 +3,7 @@ package net.clagon.aozora.ui.other
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import net.clagon.aozora.AozoraApp
@@ -39,17 +44,20 @@ import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogState
 import net.clagon.aozora.reader.ReaderSettings
 import net.clagon.aozora.ui.Screen
+import net.clagon.aozora.ui.theme.ColorMode
 import java.time.LocalDate
 
 /**
  * その他タブ。灰色の地に白い角丸のカードを並べる。
- * 直近 7 日の読書時間、お気に入りの作家の一覧、読書の設定、カタログ（作品数と取り直し）を置く。
+ * 直近 7 日の読書時間、お気に入りの作家の一覧、カラーモード、読書の設定、カタログ（作品数と取り直し）を置く。
  */
-// ponytail: カラーモードは、夜間・背景を作るときに足す
 @Composable
 fun OtherScreen(catalog: Catalog, push: (Screen) -> Unit) {
     val context = LocalContext.current
-    val library = (context.applicationContext as AozoraApp).library
+    val app = context.applicationContext as AozoraApp
+    val library = app.library
+    val colorMode by app.colorMode.collectAsState()
+    var colorMenuShown by remember { mutableStateOf(false) }
     val state by catalog.state.collectAsState()
     val count by catalog.workCount.collectAsState(initial = null)
     // 開いたまま日付が変わっても今日までの 7 日になるよう、前に出るたびに今日を確かめ直す
@@ -81,6 +89,30 @@ fun OtherScreen(catalog: Catalog, push: (Screen) -> Unit) {
         }
         Card {
             Item("お気に入りの作家", onClick = { push(Screen.FavoritePersons) })
+            Divider()
+            Box {
+                Item("カラーモード", value = colorMode.label, onClick = { colorMenuShown = true })
+                // メニューは行の右下から出す
+                Box(Modifier.align(Alignment.BottomEnd)) {
+                    DropdownMenu(
+                        colorMenuShown,
+                        onDismissRequest = { colorMenuShown = false },
+                        offset = DpOffset(x = (-12).dp, y = 0.dp),
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ) {
+                        ColorMode.entries.forEach {
+                            DropdownMenuItem(
+                                text = { Text(it.label) },
+                                onClick = {
+                                    app.setColorMode(it)
+                                    colorMenuShown = false
+                                },
+                                trailingIcon = { Check(it == colorMode) },
+                            )
+                        }
+                    }
+                }
+            }
         }
         Card {
             Toggle("読書中は画面を消灯しない", settings.keepScreenOn) { change(settings.copy(keepScreenOn = it)) }
@@ -115,6 +147,12 @@ private fun Card(content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surface)) {
         content()
     }
+}
+
+/** メニューで選んでいる項目の印。 */
+@Composable
+private fun Check(shown: Boolean) {
+    if (shown) Icon(Icons.Filled.Check, contentDescription = "選択中")
 }
 
 /** カードの行の区切り。 */
