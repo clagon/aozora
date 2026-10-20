@@ -53,8 +53,8 @@ import net.clagon.aozora.ui.search.personItems
 /**
  * ホームの検索窓から開く検索画面。打つたびに作家名と作品名（読み・副題・原題を含む）から引き、作家・作品の順に並べる。
  * 平仮名・片仮名、全角・半角、空白の有無の違いは問わない（[net.clagon.aozora.catalog.searchKey]）。
+ * 名前が検索語と同じもの、検索語で始まるもの、途中に含むものの順に並べる。
  */
-// ponytail: 当たった順ではなく読みの順に並べる。前方一致を先に出したくなったら並べ替えを足す
 @Composable
 fun KeywordSearch(dao: CatalogDao, push: (Screen) -> Unit, back: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
