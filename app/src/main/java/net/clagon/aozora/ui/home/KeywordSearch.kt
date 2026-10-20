@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.flowOf
 import net.clagon.aozora.catalog.CatalogDao
 import net.clagon.aozora.catalog.searchLike
 import net.clagon.aozora.ui.Screen
@@ -56,8 +57,13 @@ import net.clagon.aozora.ui.search.personItems
 fun KeywordSearch(dao: CatalogDao, push: (Screen) -> Unit, back: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val key = searchLike(query)
-    val persons by remember(key) { dao.searchPersons(key) }.collectAsState(null)
-    val works by remember(key) { dao.searchWorks(key) }.collectAsState(null)
+    // 何も打っていないときは全件に当たるので、DB を引かずに空にしておく
+    val persons by remember(key) {
+        if (key.isEmpty()) flowOf(emptyList()) else dao.searchPersons(key)
+    }.collectAsState(null)
+    val works by remember(key) {
+        if (key.isEmpty()) flowOf(emptyList()) else dao.searchWorks(key)
+    }.collectAsState(null)
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = remember { FocusRequester() }
     // 開いたらすぐ打てるようにする。作品を見て戻ってきたとき（打った文字があるとき）はキーボードを出さない
