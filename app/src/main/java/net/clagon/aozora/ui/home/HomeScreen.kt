@@ -48,7 +48,7 @@ fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
     val state by catalog.state.collectAsState()
     val works by remember { catalog.dao.newWorks(HOME_NEW_WORKS) }.collectAsState(null)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-        SearchBarPlaceholder()
+        SearchBarEntry { push(Screen.Search) }
         if (state != CatalogState.Ready || works?.isEmpty() == true) {
             Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CatalogStatus(catalog) }
         }
@@ -57,12 +57,13 @@ fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
     }
 }
 
-// ponytail: 検索はまだない。押しても何も起きない入口だけを置いている
+/** 検索の入口。押すと検索画面（[KeywordSearch]）を開き、そこで打つ。 */
 @Composable
-private fun SearchBarPlaceholder() {
+private fun SearchBarEntry(onClick: () -> Unit) {
     Row(
         Modifier.padding(top = 12.dp).fillMaxWidth().height(48.dp).clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 16.dp),
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)

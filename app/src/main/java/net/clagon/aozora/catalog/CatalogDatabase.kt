@@ -12,6 +12,7 @@ import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
+import java.text.Normalizer
 
 /** 作品。カタログ CSV の作品側の列と、作品詳細に出す底本・工作員の情報を持つ。 */
 @Entity(tableName = "works")
@@ -45,6 +46,8 @@ data class Work(
     /** 底本。複数の底本から入力した作品だけ 2 冊目が入る。底本名が空なら null。 */
     @Embedded(prefix = "source1_") val source1: SourceBook?,
     @Embedded(prefix = "source2_") val source2: SourceBook?,
+    /** 検索に使う、作品名・副題・原題とその読みを [searchKey] でそろえたもの。 */
+    val searchKey: String = searchKey(title, titleYomi, subtitle, subtitleYomi, originalTitle),
 )
 
 /** 底本。 */
@@ -76,7 +79,29 @@ data class Person(
     val born: String,
     val died: String,
     val copyrighted: Boolean,
+    /** 検索に使う、姓名・読み・ローマ字を [searchKey] でそろえたもの。姓と名は続けて書いても引けるようにつなぐ。 */
+    val searchKey: String = searchKey(
+        lastName + firstName,
+        lastNameYomi + firstNameYomi,
+        firstNameRoman + lastNameRoman,
+        lastNameRoman + firstNameRoman,
+    ),
 )
+
+/**
+ * 検索のための形にそろえた文字列。全角英数字を半角に、英字を小文字に、片仮名を平仮名にし、空白を除く。
+ * 読みは片仮名まじりのこともある（例: ウェストミンスターじいん）ので、平仮名・片仮名のどちらで打っても引けるようにする。
+ * parts は改行でつなぎ、項目をまたいで当たらないようにする（検索語は改行を含まない）。
+ */
+fun searchKey(vararg parts: String) = parts.joinToString("\n") { part ->
+    Normalizer.normalize(part, Normalizer.Form.NFKC).lowercase()
+        .filterNot(Char::isWhitespace)
+        .map { if (it in 'ァ'..'ヶ') it - 0x60 else it }
+        .joinToString("")
+}
+
+/** 検索窓の文字を、[CatalogDao.searchWorks] などに渡す形にする。[searchKey] でそろえ、LIKE の記号（`%` `_` `\`）をエスケープする。 */
+fun searchLike(query: String) = searchKey(query).replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 /** 作品と作家の組。role は CSV の役割フラグ（著者・翻訳者・校訂者・編者・その他）そのまま。 */
 @Entity(tableName = "credits", primaryKeys = ["workId", "personId", "role"], indices = [Index("personId")])
@@ -210,6 +235,19 @@ abstract class CatalogDao {
     @Query("$WORK_ITEM WHERE w.id IN (SELECT workId FROM credits WHERE personId = :personId) ORDER BY w.sortYomi")
     abstract fun worksByPerson(personId: Int): Flow<List<WorkItem>>
 
+    /** 検索語（[searchKey] でそろえ、LIKE の記号を `\` でエスケープしたもの）を含む作品。 */
+    @Query("$WORK_ITEM WHERE w.searchKey LIKE '%' || :key || '%' ESCAPE '\\' ORDER BY w.sortYomi")
+    abstract fun searchWorks(key: String): Flow<List<WorkItem>>
+
+    /** 検索語（[searchWorks] と同じ形）を含む作家と、それぞれの作品数。 */
+    @Query(
+        """
+        SELECT p.id, p.lastName, p.firstName, p.lastNameSort,
+            (SELECT COUNT(DISTINCT c.workId) FROM credits c WHERE c.personId = p.id) AS workCount
+        FROM persons p WHERE p.searchKey LIKE '%' || :key || '%' ESCAPE '\' ORDER BY p.lastNameSort, p.firstNameSort""",
+    )
+    abstract fun searchPersons(key: String): Flow<List<PersonItem>>
+
     /** 作家別で選んだ行（[KanaRow]）に姓の読みが入る作家と、それぞれの作品数。 */
     @Query(
         """
@@ -262,7 +300,7 @@ abstract class CatalogDao {
  */
 @Database(
     entities = [Work::class, Person::class, Credit::class, WorkNote::class, PersonNote::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class CatalogDatabase : RoomDatabase() {

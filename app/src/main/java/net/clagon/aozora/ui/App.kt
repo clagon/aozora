@@ -69,11 +69,15 @@ fun App() {
     var tab by rememberSaveableEnum(Tab.Home)
     // ponytail: 画面の積み上げは回転などで作り直されると消える。困ったら Navigation を入れる
     val stack = remember { mutableStateListOf<Screen>() }
-    val push: (Screen) -> Unit = { stack += it }
-    val back = { stack.removeAt(stack.lastIndex) }
-    BackHandler(enabled = stack.isNotEmpty()) { back() }
     // 画面を離れて戻ってきたときに、タブの選択やスクロール位置を残しておく
     val saveableState = rememberSaveableStateHolder()
+    val push: (Screen) -> Unit = { stack += it }
+    val back = {
+        // 閉じた画面の状態は捨てる。残すと、同じ画面を開き直したときに前の状態（検索の文字など）が戻ってしまう
+        saveableState.removeState(stateKey(stack))
+        stack.removeAt(stack.lastIndex)
+    }
+    BackHandler(enabled = stack.isNotEmpty()) { back() }
 
     // 状態に応じた画面をアニメーション付きで表示
     AnimatedContent(
@@ -95,7 +99,7 @@ fun App() {
     ) { screens ->
         val top = screens.lastOrNull()
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-            saveableState.SaveableStateProvider(if (top == null) "root" else "${screens.size}:$top") {
+            saveableState.SaveableStateProvider(stateKey(screens)) {
                 if (top != null) {
                     StackedScreen(top, catalog, push) { back() }
                 } else {
@@ -105,6 +109,9 @@ fun App() {
         }
     }
 }
+
+/** 積んだ画面の一番上の状態を残す鍵。何も積んでいなければタブの画面の鍵。 */
+private fun stateKey(screens: List<Screen>) = screens.lastOrNull()?.let { "${screens.size}:$it" } ?: "root"
 
 /** 下部タブと、選んだタブの画面。積んだ画面がないときだけ表示される。 */
 @Composable

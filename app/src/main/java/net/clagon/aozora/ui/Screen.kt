@@ -25,6 +25,7 @@ import net.clagon.aozora.catalog.WorkItem
 import net.clagon.aozora.catalog.kanaRange
 import net.clagon.aozora.catalog.ndcName
 import net.clagon.aozora.ui.components.WorkList
+import net.clagon.aozora.ui.home.KeywordSearch
 import net.clagon.aozora.ui.person.FavoritePersons
 import net.clagon.aozora.ui.person.FavoriteStar
 import net.clagon.aozora.ui.person.PersonDetailScreen
@@ -55,6 +56,11 @@ sealed interface Screen {
         override val title get() = listOf(ndcName(code.take(2)), ndcName(code)).distinct().joinToString(" > ")
     }
 
+    /** ホームの検索窓から開く検索。見出しの代わりに検索窓を置く。 */
+    data object Search : Screen {
+        override val title = ""
+    }
+
     /** 作品別で選んだ 1 文字で始まる作品の一覧。 */
     data class KanaWorks(val kana: String) : Screen {
         override val title get() = "作品一覧：$kana"
@@ -83,6 +89,7 @@ sealed interface Screen {
 @Composable
 fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back: () -> Unit) {
     if (screen is Screen.Reader) return ReaderScreen(screen.workId, catalog, back)
+    if (screen is Screen.Search) return KeywordSearch(catalog.dao, push, back)
     val dao = catalog.dao
     Column(Modifier.fillMaxSize().systemBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.Center) {
@@ -126,7 +133,7 @@ fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back
 
             Screen.FavoritePersons -> FavoritePersons(push)
 
-            is Screen.Reader -> {}
+            is Screen.Reader, Screen.Search -> {}
         }
     }
 }

@@ -102,7 +102,6 @@ private const val SWIPE_DP = 48
  * - 中央のタップで、戻るボタン、ページのスライダーと前後の章への移動、目次と文字パネルを開くボタンを出し入れする。
  * 読んだ位置は読了率（0〜1）で作品ごとに残し（library.db）、次に開いたときにその位置から始める。開くと読書履歴に入る。
  */
-// ponytail: 夜間・背景はまだない
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {

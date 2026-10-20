@@ -66,6 +66,21 @@ class CatalogTest {
     }
 
     @Test
+    fun searchKeyIgnoresKanaWidthCaseAndSpaces() {
+        // 読みの片仮名は平仮名に、全角英数字は半角の小文字に、空白は除く
+        assertEquals("うぇすとみんすたーじいん", searchKey("ウェストミンスターじいん"))
+        assertEquals("abc12", searchKey("ＡＢＣ　１２"))
+        assertEquals("芥川\nあくたがわ", searchKey("芥川", "あくたがわ"))
+        // 打った文字も同じ形にそろえ、LIKE の記号はエスケープする
+        assertEquals("うぇすと", searchLike("ウェスト"))
+        assertEquals("100\\%\\_", searchLike("100%_"))
+        // 姓名は続けて打っても引ける
+        val person = parseCatalog(StringReader("\uFEFF" + sample)).persons.first()
+        assert(person.searchKey.contains(searchKey("アーヴィングワシントン")))
+        assert(person.searchKey.contains("washingtonirving"))
+    }
+
+    @Test
     fun ndcNamesFollowEachLevel() {
         assertEquals("文学", ndcName("9"))
         assertEquals("日本文学", ndcName("91"))
