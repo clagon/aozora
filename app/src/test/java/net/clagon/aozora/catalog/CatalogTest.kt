@@ -81,6 +81,15 @@ class CatalogTest {
     }
 
     @Test
+    fun rankingKeepsTheOfficialOrder() {
+        // 公式の表のとおり 500 件で、重複はない。1 位は〔雨ニモマケズ〕、500 位は作品 105
+        assertEquals(500, RANKING_2022.distinct().size)
+        assertEquals(1, rankOf(45630))
+        assertEquals(500, rankOf(105))
+        assertNull(rankOf(59898))
+    }
+
+    @Test
     fun ndcNamesFollowEachLevel() {
         assertEquals("文学", ndcName("9"))
         assertEquals("日本文学", ndcName("91"))

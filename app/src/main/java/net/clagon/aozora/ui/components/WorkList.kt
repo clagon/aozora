@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.Flow
@@ -24,10 +25,15 @@ import net.clagon.aozora.catalog.WorkItem
 
 /**
  * 作品の一覧。各行は小さな表紙・作品名・文字遣い種別・著者で、押すと onClick に作品を渡す。
- * header は一覧の先頭に置き、一覧と一緒にスクロールする。
+ * header は一覧の先頭に置き、一覧と一緒にスクロールする。rank を渡すと、各行の左にその作品の順位を出す。
  */
 @Composable
-fun WorkList(works: Flow<List<WorkItem>>, onClick: (WorkItem) -> Unit, header: @Composable () -> Unit = {}) {
+fun WorkList(
+    works: Flow<List<WorkItem>>,
+    onClick: (WorkItem) -> Unit,
+    rank: ((WorkItem) -> Int?)? = null,
+    header: @Composable () -> Unit = {},
+) {
     val items by works.collectAsState(null)
     when {
         items == null -> {}
@@ -40,7 +46,7 @@ fun WorkList(works: Flow<List<WorkItem>>, onClick: (WorkItem) -> Unit, header: @
         else -> LazyColumn {
             item { header() }
             items(items!!, key = { it.id }) { work ->
-                WorkRow(work, Modifier.clickable { onClick(work) })
+                WorkRow(work, Modifier.clickable { onClick(work) }, rank = rank?.invoke(work))
             }
         }
     }
@@ -48,14 +54,29 @@ fun WorkList(works: Flow<List<WorkItem>>, onClick: (WorkItem) -> Unit, header: @
 
 /**
  * 作品の一覧の 1 行。小さな表紙・作品名・文字遣い種別・著者を並べる。押したときの動きは modifier で渡す。
- * extra は著者の下に足す行（本棚の読了率など）。
+ * extra は著者の下に足す行（本棚の読了率など）。rank を渡すと、表紙の左に順位を出す。
  */
 @Composable
-fun WorkRow(work: WorkItem, modifier: Modifier = Modifier, extra: @Composable ColumnScope.() -> Unit = {}) {
+fun WorkRow(
+    work: WorkItem,
+    modifier: Modifier = Modifier,
+    rank: Int? = null,
+    extra: @Composable ColumnScope.() -> Unit = {},
+) {
     Row(
         modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (rank != null) {
+            Text(
+                "$rank",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(40.dp).padding(end = 8.dp),
+            )
+        }
         BookCover(work, Modifier.width(64.dp), small = true)
         Column(Modifier.padding(start = 16.dp).weight(1f)) {
             Text(
