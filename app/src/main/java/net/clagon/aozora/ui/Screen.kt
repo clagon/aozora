@@ -28,6 +28,7 @@ import net.clagon.aozora.catalog.rankOf
 import net.clagon.aozora.catalog.ranking
 import net.clagon.aozora.ui.components.WorkList
 import net.clagon.aozora.ui.home.KeywordSearch
+import net.clagon.aozora.ui.home.NewWorksList
 import net.clagon.aozora.ui.person.FavoritePersons
 import net.clagon.aozora.ui.person.FavoriteStar
 import net.clagon.aozora.ui.person.PersonDetailScreen
@@ -40,7 +41,7 @@ sealed interface Screen {
     /** 上部の見出しに出す文字。 */
     val title: String
 
-    /** ホームの「もっと見る」で開く、新着作品の全件。 */
+    /** ホームの「もっと見る」で開く、新着作品の一覧。公開年で絞る。 */
     data object NewWorks : Screen {
         override val title = "新着作品"
     }
@@ -159,7 +160,7 @@ fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back
         }
         val open = { work: WorkItem -> push(Screen.WorkDetail(work.id)) }
         when (screen) {
-            Screen.NewWorks -> WorkList(remember { dao.newWorks(Int.MAX_VALUE) }, open)
+            Screen.NewWorks -> NewWorksList(dao, open)
 
             Screen.Ranking -> WorkList(remember { dao.ranking() }, open, rank = { rankOf(it.id) })
 

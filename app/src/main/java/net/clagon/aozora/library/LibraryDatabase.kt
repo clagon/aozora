@@ -73,6 +73,10 @@ abstract class LibraryDao {
     @Query("UPDATE readings SET inHistory = 0 WHERE workId = :workId")
     abstract suspend fun removeFromHistory(workId: Int)
 
+    /** 読書履歴をすべて外す。[removeFromHistory] と同じく読書位置は残す。 */
+    @Query("UPDATE readings SET inHistory = 0")
+    abstract suspend fun clearHistory()
+
     /** お気に入り作家の ID。 */
     @Query("SELECT personId FROM favorite_persons")
     abstract fun favoritePersons(): Flow<List<Int>>
