@@ -253,6 +253,7 @@ fun ReaderScreen(workId: Int, catalog: Catalog, back: () -> Unit) {
             text!!.isFailure -> Text(
                 text!!.exceptionOrNull()?.message ?: "本文を読み込めませんでした",
                 Modifier.align(Alignment.Center).padding(24.dp),
+                color = Color(readerSettings.palette.ink),
             )
 
             else -> AndroidView(
