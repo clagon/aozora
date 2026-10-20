@@ -66,6 +66,18 @@ class CatalogTest {
     }
 
     @Test
+    fun ndcNamesFollowEachLevel() {
+        assertEquals("文学", ndcName("9"))
+        assertEquals("日本文学", ndcName("91"))
+        assertEquals("小説・物語", ndcName("913"))
+        assertEquals("情報学・情報科学", ndcName("007"))
+        // 番号のない区分（001）と、10 版で使われなくなった区分（119）は並べない
+        assertEquals(listOf("000", "002", "007"), ndcChildren("00"))
+        assertEquals(9, ndcChildren("11").size)
+        assertEquals(10, ndcChildren("9").size)
+    }
+
+    @Test
     fun countNdcCountsEachWorkOncePerDivision() {
         val counts = countNdc(listOf("NDC 913", "NDC K913", "NDC 913 914", "NDC 756 K914", ""))
         assertEquals(4, counts.of("9", kidsOnly = false))
