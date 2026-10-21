@@ -46,6 +46,12 @@ abstract class LibraryDao {
     @Query("SELECT * FROM readings WHERE inHistory ORDER BY openedAt DESC")
     abstract fun history(): Flow<List<Reading>>
 
+    /** 読書履歴のうち、読み始めていて最後まで読んでいないものを limit 件まで。最後に開いた順。 */
+    @Query(
+        "SELECT * FROM readings WHERE inHistory AND progress > 0 AND progress < 1 ORDER BY openedAt DESC LIMIT :limit",
+    )
+    abstract fun inProgress(limit: Int): Flow<List<Reading>>
+
     @Query("SELECT EXISTS(SELECT 1 FROM shelf WHERE workId = :workId)")
     abstract fun onShelf(workId: Int): Flow<Boolean>
 

@@ -55,7 +55,7 @@ fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
     val works by remember { catalog.dao.newWorks(HOME_WORKS) }.collectAsState(null)
     val app = LocalContext.current.applicationContext as AozoraApp
     val rankings = app.rankings
-    val reading by remember { app.library.inProgress() }.collectAsState(emptyList())
+    val reading by remember { app.library.inProgress(3) }.collectAsState(emptyList())
     val ranking by remember { catalog.dao.ranking(rankings.latest, HOME_WORKS) }.collectAsState(null)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         SearchBarEntry { push(Screen.Search) }
@@ -64,7 +64,7 @@ fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
         }
         if (reading.isNotEmpty()) {
             SectionHeader("続きから読む")
-            ContinueReading(reading.take(3)) { push(Screen.Reader(it.work.id)) }
+            ContinueReading(reading) { push(Screen.Reader(it.work.id)) }
         }
         SectionHeader("新着作品") { push(Screen.NewWorks) }
         works?.takeIf { it.isNotEmpty() }?.let { CoverShowcase(it) { work -> push(Screen.WorkDetail(work.id)) } }
