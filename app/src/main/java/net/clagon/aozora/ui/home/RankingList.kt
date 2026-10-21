@@ -36,7 +36,7 @@ fun RankingList(dao: CatalogDao, open: (WorkItem) -> Unit) {
     // 年や月を変えたら一覧を作り直し、先頭から見せる
     key(period) {
         val ranks = remember { rankings.ranks(period) }
-        WorkList(remember { dao.ranking(rankings[period]) }, open, rank = { ranks[it.id] }) {
+        WorkList(remember { dao.ranking(rankings[period]) }, open, rank = { ranks[it.id] }, pinHeader = true) {
             Row(Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)) {
                 ChoiceMenu(year, rankings.years, { "$it 年" }, "年を選ぶ") {
                     year = it

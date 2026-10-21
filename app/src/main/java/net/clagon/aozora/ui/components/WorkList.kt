@@ -1,6 +1,8 @@
 package net.clagon.aozora.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -25,7 +27,8 @@ import net.clagon.aozora.catalog.WorkItem
 
 /**
  * 作品の一覧。各行は小さな表紙・作品名・文字遣い種別・著者で、押すと onClick に作品を渡す。
- * header は一覧の先頭に置き、一覧と一緒にスクロールする。rank を渡すと、各行の左にその作品の順位を出す。
+ * header は一覧の先頭に置き、一覧と一緒にスクロールする。pinHeader なら header を上に残し、行はその下をくぐる。
+ * rank を渡すと、各行の左にその作品の順位を出す。
  * extra は各行の著者の下に足す行（[WorkRow] の extra）。
  */
 @Composable
@@ -34,6 +37,7 @@ fun WorkList(
     onClick: (WorkItem) -> Unit,
     rank: ((WorkItem) -> Int?)? = null,
     extra: @Composable ColumnScope.(WorkItem) -> Unit = {},
+    pinHeader: Boolean = false,
     header: @Composable () -> Unit = {},
 ) {
     val items by works.collectAsState(null)
@@ -46,7 +50,13 @@ fun WorkList(
         }
 
         else -> LazyColumn {
-            item { header() }
+            if (pinHeader) {
+                stickyHeader {
+                    Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) { header() }
+                }
+            } else {
+                item { header() }
+            }
             items(items!!, key = { it.id }) { work ->
                 WorkRow(work, Modifier.clickable { onClick(work) }, rank = rank?.invoke(work)) { extra(work) }
             }
