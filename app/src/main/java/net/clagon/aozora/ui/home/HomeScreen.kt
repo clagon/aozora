@@ -38,7 +38,9 @@ import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogState
 import net.clagon.aozora.catalog.WorkItem
 import net.clagon.aozora.catalog.ranking
+import net.clagon.aozora.library.Book
 import net.clagon.aozora.ui.Screen
+import net.clagon.aozora.ui.bookshelf.ProgressDots
 import net.clagon.aozora.ui.components.BookCover
 import net.clagon.aozora.ui.components.CatalogStatus
 import net.clagon.aozora.ui.components.NdcTagRow
@@ -46,17 +48,23 @@ import net.clagon.aozora.ui.components.NdcTagRow
 // 1 件目を表紙と詳細で大きく出し、続く 3 件を表紙だけで並べる
 private const val HOME_WORKS = 4
 
-/** ホームタブ。検索の入口と、新着作品・ランキングを数件ずつ出す。 */
+/** ホームタブ。検索の入口と、読みかけの作品（あれば）・新着作品・ランキングを数件ずつ出す。 */
 @Composable
 fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
     val state by catalog.state.collectAsState()
     val works by remember { catalog.dao.newWorks(HOME_WORKS) }.collectAsState(null)
-    val rankings = (LocalContext.current.applicationContext as AozoraApp).rankings
+    val app = LocalContext.current.applicationContext as AozoraApp
+    val rankings = app.rankings
+    val reading by remember { app.library.inProgress(3) }.collectAsState(emptyList())
     val ranking by remember { catalog.dao.ranking(rankings.latest, HOME_WORKS) }.collectAsState(null)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         SearchBarEntry { push(Screen.Search) }
         if (state != CatalogState.Ready || works?.isEmpty() == true) {
             Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CatalogStatus(catalog) }
+        }
+        if (reading.isNotEmpty()) {
+            SectionHeader("続きから読む")
+            ContinueReading(reading) { push(Screen.Reader(it.work.id)) }
         }
         SectionHeader("新着作品") { push(Screen.NewWorks) }
         works?.takeIf { it.isNotEmpty() }?.let { CoverShowcase(it) { work -> push(Screen.WorkDetail(work.id)) } }
@@ -85,9 +93,9 @@ private fun SearchBarEntry(onClick: () -> Unit) {
     }
 }
 
-/** 区画の見出しと、右端の「もっと見る」。 */
+/** 区画の見出しと、onMore があれば右端の「もっと見る」。 */
 @Composable
-private fun SectionHeader(title: String, onMore: () -> Unit) {
+private fun SectionHeader(title: String, onMore: (() -> Unit)? = null) {
     Row(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(
             title,
@@ -95,6 +103,7 @@ private fun SectionHeader(title: String, onMore: () -> Unit) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
+        if (onMore == null) return@Row
         Row(Modifier.clickable(onClick = onMore).padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("もっと見る", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyLarge)
             Icon(
@@ -103,6 +112,20 @@ private fun SectionHeader(title: String, onMore: () -> Unit) {
                 tint = MaterialTheme.colorScheme.primary,
             )
         }
+    }
+}
+
+/** 読みかけの作品の表紙を 3 列で並べ、下に読了率の点を出す。押すとリーダーで続きを開く。 */
+@Composable
+private fun ContinueReading(books: List<Book>, read: (Book) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        books.forEach {
+            Column(Modifier.weight(1f).clickable { read(it) }) {
+                BookCover(it.work, Modifier.fillMaxWidth())
+                ProgressDots(it.progress)
+            }
+        }
+        repeat(3 - books.size) { Spacer(Modifier.weight(1f)) }
     }
 }
 

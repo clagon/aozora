@@ -264,7 +264,7 @@ private fun BookStatus(book: Book) {
 
 /** 表紙の下の読了率。10 個の点のうち、読んだ割合の分を塗る。 */
 @Composable
-private fun ProgressDots(progress: Float) {
+fun ProgressDots(progress: Float) {
     val filled = (progress * 10).toInt()
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
         repeat(10) {

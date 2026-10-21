@@ -56,11 +56,14 @@ class Library(val dao: LibraryDao, private val catalog: CatalogDao, private val 
     /** お気に入り作家。カタログから消えた作家は並べない。 */
     fun favoritePersons(): Flow<List<PersonItem>> = dao.favoritePersons().flatMapLatest { catalog.personItems(it) }
 
-    fun history(): Flow<List<Book>> = dao.history().flatMapLatest { rows ->
-        catalog.workItems(rows.map { it.workId }).map { works ->
-            val byId = works.associateBy { it.id }
-            rows.mapNotNull { r -> byId[r.workId]?.let { Book(it, r.progress, r.openedAt, null) } }
-        }
+    /** 読みかけの作品を limit 件まで。読書履歴のうち、読み始めていて最後まで読んでいないもの。最後に開いた順。 */
+    fun inProgress(limit: Int): Flow<List<Book>> = dao.inProgress(limit).flatMapLatest(::books)
+
+    fun history(): Flow<List<Book>> = dao.history().flatMapLatest(::books)
+
+    private fun books(rows: List<Reading>) = catalog.workItems(rows.map { it.workId }).map { works ->
+        val byId = works.associateBy { it.id }
+        rows.mapNotNull { r -> byId[r.workId]?.let { Book(it, r.progress, r.openedAt, null) } }
     }
 }
 
