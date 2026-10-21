@@ -27,6 +27,10 @@ android {
     }
 
     buildTypes {
+        // 開発用の版は別のアプリとして入れる。同じ ID だと署名が違うリリースの版とぶつかり、上書きもできない
+        debug {
+            applicationIdSuffix = ".dev"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
