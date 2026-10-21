@@ -63,7 +63,7 @@ import net.clagon.aozora.ui.search.personItems
  * ホームの検索窓から開く検索画面。打つたびに作家名と作品名（読み・副題・原題を含む）から引き、作家・作品の順に並べる。
  * 平仮名・片仮名、全角・半角、空白の有無の違いは問わない（[net.clagon.aozora.catalog.searchKey]）。
  * 名前が検索語と同じもの、検索語で始まるもの、途中に含むものの順に並べる。
- * 何も打っていない間は、最近の検索を出す。検索キーを押したときと、結果から作品・作家を開いたときに履歴に残す。
+ * 何も打っていない間は、最近の検索を出す。検索キーを押したとき、結果から作品・作家を開いたとき、履歴から選んだときに、その語を履歴の先頭に置く。
  */
 @Composable
 fun KeywordSearch(dao: CatalogDao, push: (Screen) -> Unit, back: () -> Unit) {
@@ -141,6 +141,7 @@ fun KeywordSearch(dao: CatalogDao, push: (Screen) -> Unit, back: () -> Unit) {
                 history,
                 select = {
                     field = TextFieldValue(it, TextRange(it.length))
+                    changeHistory(withSearch(history, it))
                     keyboard?.hide()
                 },
                 remove = { item -> changeHistory(history - item) },
