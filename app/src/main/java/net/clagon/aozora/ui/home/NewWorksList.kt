@@ -19,7 +19,7 @@ import net.clagon.aozora.catalog.WorkItem
 import net.clagon.aozora.ui.components.ChoiceMenu
 import net.clagon.aozora.ui.components.WorkList
 
-/** 新着作品の一覧。先頭の年を押して公開年を選び、各行には公開日を月日で添える。最初は一番新しい年を出す。 */
+/** 新着作品の一覧。上に残る年を押して公開年を選び、各行には公開日を月日で添える。最初は一番新しい年を出す。 */
 @Composable
 fun NewWorksList(dao: CatalogDao, open: (WorkItem) -> Unit) {
     val years by remember { dao.publishedYears() }.collectAsState(null)
@@ -30,6 +30,7 @@ fun NewWorksList(dao: CatalogDao, open: (WorkItem) -> Unit) {
         WorkList(
             remember { dao.newWorksIn(year) },
             open,
+            pinHeader = true,
             extra = { work ->
                 Text(
                     publishedMonthDay(work.publishedOn),
