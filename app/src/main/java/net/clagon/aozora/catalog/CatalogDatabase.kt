@@ -168,6 +168,15 @@ private const val WORK_ITEM = """
     FROM works w"""
 
 /**
+ * 検索の当たり方の順。searchKey の項目（作品名・読みなど、改行で区切ったもの）のどれかが検索語と同じなら 0、
+ * 検索語で始まるなら 1、途中に含むだけなら 2。同じ順位の中は呼び出し側で読みの順に並べる。
+ */
+private const val BY_MATCH = """
+    CASE WHEN char(10) || searchKey || char(10) LIKE '%' || char(10) || :key || char(10) || '%' ESCAPE '\' THEN 0
+        WHEN char(10) || searchKey LIKE '%' || char(10) || :key || '%' ESCAPE '\' THEN 1
+        ELSE 2 END"""
+
+/**
  * カタログの読み書き。画面は ViewModel を挟まずにこの DAO の Flow を直接購読する。
  * Flow はテーブルが書き換わると流れ直すので、カタログを取り直すと開いている一覧も更新される。
  */
@@ -244,8 +253,8 @@ abstract class CatalogDao {
     @Query("$WORK_ITEM WHERE w.id IN (SELECT workId FROM credits WHERE personId = :personId) ORDER BY w.sortYomi")
     abstract fun worksByPerson(personId: Int): Flow<List<WorkItem>>
 
-    /** 検索語（[searchKey] でそろえ、LIKE の記号を `\` でエスケープしたもの）を含む作品。 */
-    @Query("$WORK_ITEM WHERE w.searchKey LIKE '%' || :key || '%' ESCAPE '\\' ORDER BY w.sortYomi")
+    /** 検索語（[searchKey] でそろえ、LIKE の記号を `\` でエスケープしたもの）を含む作品。[BY_MATCH] の順に並べる。 */
+    @Query("$WORK_ITEM WHERE w.searchKey LIKE '%' || :key || '%' ESCAPE '\\' ORDER BY $BY_MATCH, w.sortYomi")
     abstract fun searchWorks(key: String): Flow<List<WorkItem>>
 
     /** 検索語（[searchWorks] と同じ形）を含む作家と、それぞれの作品数。 */
@@ -253,7 +262,8 @@ abstract class CatalogDao {
         """
         SELECT p.id, p.lastName, p.firstName, p.lastNameSort,
             (SELECT COUNT(DISTINCT c.workId) FROM credits c WHERE c.personId = p.id) AS workCount
-        FROM persons p WHERE p.searchKey LIKE '%' || :key || '%' ESCAPE '\' ORDER BY p.lastNameSort, p.firstNameSort""",
+        FROM persons p WHERE p.searchKey LIKE '%' || :key || '%' ESCAPE '\'
+        ORDER BY $BY_MATCH, p.lastNameSort, p.firstNameSort""",
     )
     abstract fun searchPersons(key: String): Flow<List<PersonItem>>
 
