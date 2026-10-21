@@ -24,11 +24,10 @@ import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.WorkItem
 import net.clagon.aozora.catalog.kanaRange
 import net.clagon.aozora.catalog.ndcName
-import net.clagon.aozora.catalog.rankOf
-import net.clagon.aozora.catalog.ranking
 import net.clagon.aozora.ui.components.WorkList
 import net.clagon.aozora.ui.home.KeywordSearch
 import net.clagon.aozora.ui.home.NewWorksList
+import net.clagon.aozora.ui.home.RankingList
 import net.clagon.aozora.ui.person.FavoritePersons
 import net.clagon.aozora.ui.person.FavoriteStar
 import net.clagon.aozora.ui.person.PersonDetailScreen
@@ -59,9 +58,9 @@ sealed interface Screen {
         override val title get() = listOf(ndcName(code.take(2)), ndcName(code)).distinct().joinToString(" > ")
     }
 
-    /** ホームの「もっと見る」で開く、ランキングの全件。行の左に順位を出す。 */
+    /** ホームの「もっと見る」で開く、ランキングの一覧。年と月で選び、行の左に順位を出す。 */
     data object Ranking : Screen {
-        override val title = "ランキング（2022 年）"
+        override val title = "ランキング"
     }
 
     /** ホームの検索窓から開く検索。見出しの代わりに検索窓を置く。 */
@@ -162,7 +161,7 @@ fun StackedScreen(screen: Screen, catalog: Catalog, push: (Screen) -> Unit, back
         when (screen) {
             Screen.NewWorks -> NewWorksList(dao, open)
 
-            Screen.Ranking -> WorkList(remember { dao.ranking() }, open, rank = { rankOf(it.id) })
+            Screen.Ranking -> RankingList(dao, open)
 
             is Screen.Ndc -> NdcDivisionList(screen, catalog, push)
 
