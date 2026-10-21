@@ -3,6 +3,7 @@ package net.clagon.aozora.catalog
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.io.File
 import java.io.StringReader
 
 class CatalogTest {
@@ -81,12 +82,25 @@ class CatalogTest {
     }
 
     @Test
-    fun rankingKeepsTheOfficialOrder() {
-        // 公式の表のとおり 500 件で、重複はない。1 位は〔雨ニモマケズ〕、500 位は作品 105
-        assertEquals(500, RANKING_2022.distinct().size)
-        assertEquals(1, rankOf(45630))
-        assertEquals(500, rankOf(105))
-        assertNull(rankOf(59898))
+    fun rankingsKeepTheOfficialOrder() {
+        // テストはモジュールの置き場で走るので、アプリに入れる ranking.tsv をそのまま読む
+        val rankings = File("src/main/assets/ranking.tsv").reader().use(::readRankings)
+        assertEquals((2022 downTo 2009).map { "$it" }, rankings.years)
+        // 公式のページが消えている月（2014 年 12 月・2015 年 8 月）は持たない
+        assertEquals((12 downTo 1).toList(), rankings.months("2022"))
+        assertEquals((12 downTo 1).filter { it != 8 }, rankings.months("2015"))
+        assertEquals(emptyList<Int>(), rankings["2015-08"])
+        // どの期間も公式の表のとおり 500 件。2022 年通年の 1 位は〔雨ニモマケズ〕、500 位は作品 105
+        val periods = rankings.years.flatMap { y -> listOf(y) + rankings.months(y).map { "%s-%02d".format(y, it) } }
+        assertEquals(180, periods.size)
+        periods.forEach { assertEquals(it, 500, rankings[it].size) }
+        assertEquals(45630, rankings.latest.first())
+        assertEquals(105, rankings.latest.last())
+        // 2 度入っている作品（2021 年 12 月の作品 2522 は 248 位と 442 位）は上の順位にし、442 位は欠番にする
+        val ranks = rankings.ranks("2021-12")
+        assertEquals(499, ranks.size)
+        assertEquals(248, ranks[2522])
+        assertEquals(listOf(248, 442), rankings["2021-12"].withIndex().filter { it.value == 2522 }.map { it.index + 1 })
     }
 
     @Test

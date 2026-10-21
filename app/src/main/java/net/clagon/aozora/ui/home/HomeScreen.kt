@@ -29,9 +29,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import net.clagon.aozora.AozoraApp
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogState
 import net.clagon.aozora.catalog.WorkItem
@@ -49,7 +51,8 @@ private const val HOME_WORKS = 4
 fun HomeScreen(catalog: Catalog, push: (Screen) -> Unit) {
     val state by catalog.state.collectAsState()
     val works by remember { catalog.dao.newWorks(HOME_WORKS) }.collectAsState(null)
-    val ranking by remember { catalog.dao.ranking(HOME_WORKS) }.collectAsState(null)
+    val rankings = (LocalContext.current.applicationContext as AozoraApp).rankings
+    val ranking by remember { catalog.dao.ranking(rankings.latest, HOME_WORKS) }.collectAsState(null)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         SearchBarEntry { push(Screen.Search) }
         if (state != CatalogState.Ready || works?.isEmpty() == true) {

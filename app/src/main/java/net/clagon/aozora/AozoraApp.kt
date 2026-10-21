@@ -6,6 +6,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import net.clagon.aozora.catalog.Catalog
 import net.clagon.aozora.catalog.CatalogDatabase
+import net.clagon.aozora.catalog.readRankings
 import net.clagon.aozora.library.Library
 import net.clagon.aozora.library.LibraryDatabase
 import net.clagon.aozora.library.MIGRATION_1_2
@@ -39,6 +40,9 @@ class AozoraApp : Application() {
             .build()
         Library(db.libraryDao(), catalog.dao, scope)
     }
+
+    /** 公式のアクセスランキング。初めて使うときに assets から読む（全期間で 450 KB ほど）。 */
+    val rankings by lazy { assets.open("ranking.tsv").reader().use(::readRankings) }
 
     /** 作品の本文の置き場。読んだ本文は files/texts に残る。 */
     val texts by lazy { Texts(File(filesDir, "texts")) }
