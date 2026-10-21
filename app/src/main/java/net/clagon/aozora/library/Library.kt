@@ -9,7 +9,9 @@ import kotlinx.coroutines.launch
 import net.clagon.aozora.catalog.CatalogDao
 import net.clagon.aozora.catalog.PersonItem
 import net.clagon.aozora.catalog.WorkItem
+import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 /** 本棚や読書履歴に並べる 1 冊。開いたことがなければ openedAt は null、本棚になければ addedAt は null。 */
 data class Book(val work: WorkItem, val progress: Float, val openedAt: Long?, val addedAt: Long?)
@@ -31,12 +33,12 @@ enum class ShelfOrder(val label: String) {
 @OptIn(ExperimentalCoroutinesApi::class)
 class Library(val dao: LibraryDao, private val catalog: CatalogDao, private val scope: CoroutineScope) {
     /**
-     * 今日の読書時間に millis を足す。リーダーを閉じるときにも呼ぶので、画面ではなくアプリのスコープで書く
-     * （画面のスコープは閉じると止まり、書き込みが消える）。
+     * endedAgo ミリ秒前までの millis を、読んだ日の読書時間に足す。0 時をまたいでいれば 2 日に分ける。
+     * リーダーを閉じるときにも呼ぶので、画面ではなくアプリのスコープで書く（画面のスコープは閉じると止まり、書き込みが消える）。
      */
-    fun addReadingTime(millis: Long) {
-        val day = LocalDate.now().toString()
-        scope.launch { dao.addReadingTime(day, millis) }
+    fun addReadingTime(millis: Long, endedAgo: Long) {
+        val days = splitAtMidnight(LocalDateTime.now().minus(Duration.ofMillis(endedAgo)), millis)
+        scope.launch { days.forEach { (day, ms) -> dao.addReadingTime(day.toString(), ms) } }
     }
 
     /** today までの 7 日の読書時間。古い日から順に、読んでいない日も 0 で並べる。 */
@@ -69,6 +71,17 @@ internal fun List<Book>.sortedFor(order: ShelfOrder): List<Book> = when (order) 
     ShelfOrder.Recent -> sortedByDescending { maxOf(it.openedAt ?: 0, it.addedAt ?: 0) }
     ShelfOrder.Added -> sortedByDescending { it.addedAt ?: 0 }
     ShelfOrder.Title -> sortedBy { it.work.sortYomi }
+}
+
+/** end に終わった millis（1 日より短い）を、日ごとの時間に分ける。0 時をまたいでいなければ 1 日だけ。 */
+internal fun splitAtMidnight(end: LocalDateTime, millis: Long): Map<LocalDate, Long> {
+    val start = end.minus(Duration.ofMillis(millis))
+    if (start.toLocalDate() == end.toLocalDate()) return mapOf(end.toLocalDate() to millis)
+    val midnight = end.toLocalDate().atStartOfDay()
+    return mapOf(
+        start.toLocalDate() to Duration.between(start, midnight).toMillis(),
+        end.toLocalDate() to Duration.between(midnight, end).toMillis(),
+    )
 }
 
 /** today までの 7 日を古い順に並べ、rows にない日は 0 にする。 */

@@ -33,8 +33,8 @@ class ReadingTimeTest {
     @Test
     fun clockCapsEachPageAndStopsCounting() {
         var now = 0L
-        val recorded = mutableListOf<Long>()
-        val clock = ReadingClock(recorded::add) { now }
+        val recorded = mutableListOf<Pair<Long, Long>>()
+        val clock = ReadingClock({ millis, endedAgo -> recorded += millis to endedAgo }) { now }
         clock.lap() // 始める前は数えない
         clock.start()
         now = 30_000
@@ -43,6 +43,16 @@ class ReadingTimeTest {
         clock.stop()
         now += 60_000
         clock.lap() // 止めたあとは数えない
-        assertEquals(listOf(30_000L, MAX_PAGE_MILLIS), recorded)
+        assertEquals(listOf(30_000L to 0L, MAX_PAGE_MILLIS to MAX_PAGE_MILLIS), recorded)
+    }
+
+    @Test
+    fun splitAtMidnight() {
+        val day = LocalDate.of(2026, 10, 20)
+        assertEquals(mapOf(day to 60_000L), splitAtMidnight(day.atTime(0, 1), 60_000))
+        assertEquals(
+            mapOf(today to 90_000L, day to 30_000L),
+            splitAtMidnight(day.atTime(0, 0, 30), 120_000),
+        )
     }
 }
